@@ -115,7 +115,7 @@ function buildDetailHtml(page) {
       description: page.description,
       url: page.url,
       mainEntityOfPage: page.url,
-      image: [new URL("social-card.svg", siteOrigin).toString()],
+      image: [new URL("social-card.png", siteOrigin).toString()],
       inLanguage: "ru",
       author: {
         "@type": "Person",
@@ -242,7 +242,7 @@ function buildSitemap(pages) {
 
 function applySeo(templateHtml, seo, appHtml) {
   let html = templateHtml;
-  const ogImage = new URL("social-card.svg", siteOrigin).toString();
+  const ogImage = new URL("social-card.png", siteOrigin).toString();
 
   html = html.replace(/<title>[\s\S]*?<\/title>/, `<title>${escapeHtml(seo.title)}</title>`);
   html = html.replace(
