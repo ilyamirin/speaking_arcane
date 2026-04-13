@@ -182,7 +182,6 @@ export class SpreadCanvas {
       transparent: true,
       backgroundColor: "#09090b",
       banner: false,
-      scene: [TarotSpreadScene],
       scale: {
         mode: Phaser.Scale.NONE,
         width: SCENE_WIDTH,
@@ -194,10 +193,11 @@ export class SpreadCanvas {
         pixelArt: false,
         transparent: true
       },
+      scene: [],
       callbacks: {
         postBoot: (game) => {
           game.registry.set("spreadData", this.state);
-          game.scene.start("tarot-spread", {
+          game.scene.add("tarot-spread", TarotSpreadScene, true, {
             cards: this.state.cards,
             reducedMotion: this.state.reducedMotion
           });
