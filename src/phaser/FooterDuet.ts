@@ -519,8 +519,7 @@ export function buildInteractiveFooter(reducedMotion = false): HTMLElement {
   meta.className = "footer-duet__meta footer-duet__meta--stacked";
   meta.innerHTML = `
     <p class="footer-duet__copyright">Ilya G Mirin 2026</p>
-    <p>Cards and UI sounds adapted from open sources.</p>
-    <p>All readings and editorial content are AI generated.</p>
+    <p>Cards and UI sounds adapted from open sources. All readings and editorial content are AI generated.</p>
   `;
 
   section.append(board, meta);
