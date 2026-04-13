@@ -647,6 +647,19 @@ input {
   margin: 0;
 }
 
+.footer-duet__meta a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(212, 196, 186, 0.28);
+  text-underline-offset: 0.16em;
+}
+
+.footer-duet__meta a:hover,
+.footer-duet__meta a:focus-visible {
+  color: var(--paper);
+  text-decoration-color: currentColor;
+}
+
 @media (min-width: 720px) {
   .page {
     padding: 1.5rem 1.5rem 4.5rem;

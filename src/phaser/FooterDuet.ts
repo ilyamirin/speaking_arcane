@@ -520,6 +520,7 @@ export function buildInteractiveFooter(reducedMotion = false): HTMLElement {
   meta.innerHTML = `
     <p class="footer-duet__copyright">Ilya G Mirin 2026</p>
     <p>Карты и звуки интерфейса взяты из открытых источников. Все тексты и расклады сгенерированы ИИ.</p>
+    <p><a href="https://www.linkedin.com/in/ilyamirin/" target="_blank" rel="noreferrer">LinkedIn</a></p>
   `;
 
   section.append(board, meta);
