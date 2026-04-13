@@ -27,6 +27,7 @@ playwright-report/
 test-results/
 coverage/
 tmp/
+.preview-root/
 
 # TypeScript cache
 *.tsbuildinfo

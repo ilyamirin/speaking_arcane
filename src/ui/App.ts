@@ -240,7 +240,7 @@ function renderHomeApp(root: HTMLElement): void {
     const fragment = document.createDocumentFragment();
 
     nextSpreads.forEach((spread) => {
-      const section = buildSpreadSection(spread, reducedMotion);
+      const section = buildSpreadSection(spread);
       fragment.append(section);
       hydrateObserver?.observe(section);
     });

@@ -1,0 +1,21 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#09080B"/>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="982" cy="154" r="136" stroke="#403538" stroke-opacity="0.45"/>
+  <circle cx="894" cy="478" r="204" stroke="#2A2326" stroke-opacity="0.4"/>
+  <path d="M90 474H1110" stroke="#2D2628" stroke-opacity="0.8"/>
+  <path d="M90 114H642" stroke="#2D2628" stroke-opacity="0.8"/>
+  <text x="92" y="98" fill="#AB9F96" font-family="Manrope, sans-serif" font-size="24" letter-spacing="0.18em">SPEAKING ARCANE</text>
+  <text x="92" y="222" fill="#E6DDD4" font-family="Georgia, 'Times New Roman', serif" font-size="88">Три карты.</text>
+  <text x="92" y="310" fill="#E6DDD4" font-family="Georgia, 'Times New Roman', serif" font-size="88">Их спор.</text>
+  <text x="92" y="398" fill="#E6DDD4" font-family="Georgia, 'Times New Roman', serif" font-size="88">Мужской вывод,</text>
+  <text x="92" y="486" fill="#E6DDD4" font-family="Georgia, 'Times New Roman', serif" font-size="88">сказанный тихо.</text>
+  <text x="92" y="554" fill="#D2C7BB" font-family="Manrope, sans-serif" font-size="28">Нуарный блог раскладов Таро Уэйта о любви, отношениях и паузах.</text>
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(587 -34) rotate(87.3401) scale(630.675 1040.6)">
+      <stop stop-color="#4F1D24" stop-opacity="0.36"/>
+      <stop offset="0.39" stop-color="#1A171C" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#09080B" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>

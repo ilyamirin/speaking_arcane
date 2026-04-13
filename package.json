@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node ./scripts/validate-content.mjs && tsc && vite build",
+    "build": "node ./scripts/validate-content.mjs && tsc && vite build && node ./scripts/generate-seo-pages.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
