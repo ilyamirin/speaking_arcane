@@ -6,24 +6,26 @@ type SoundDefinition = {
   playbackRate?: number;
 };
 
+const baseUrl = import.meta.env.BASE_URL;
+
 const soundDefinitions: Record<SoundName, SoundDefinition> = {
   stepForward: {
-    src: "/sounds/step-forward.wav",
+    src: `${baseUrl}sounds/step-forward.wav`,
     volume: 0.18,
     playbackRate: 1
   },
   stepBack: {
-    src: "/sounds/step-back.wav",
+    src: `${baseUrl}sounds/step-back.wav`,
     volume: 0.15,
     playbackRate: 0.98
   },
   filter: {
-    src: "/sounds/step-forward.wav",
+    src: `${baseUrl}sounds/step-forward.wav`,
     volume: 0.11,
     playbackRate: 0.92
   },
   finalReveal: {
-    src: "/sounds/final-reveal.wav",
+    src: `${baseUrl}sounds/final-reveal.wav`,
     volume: 0.17,
     playbackRate: 1
   }

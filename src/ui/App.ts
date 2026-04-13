@@ -44,20 +44,33 @@ const FEED_BATCH_SIZE = 6;
 const FEED_OBSERVER_ROOT_MARGIN = "1600px 0px";
 const HYDRATE_ROOT_MARGIN = "1200px 0px";
 const DEHYDRATE_DISTANCE = 2600;
+const baseUrl = import.meta.env.BASE_URL;
 
 const filterImageByTag: Record<FilterTag, { inactive: string; active: string }> = {
-  "Все": { inactive: "/filter-plaques/all.png", active: "/filter-plaques/all-active.png" },
-  "Намерения": { inactive: "/filter-plaques/intentions.png", active: "/filter-plaques/intentions-active.png" },
-  "Пауза": { inactive: "/filter-plaques/pause.png", active: "/filter-plaques/pause-active.png" },
-  "Возвращение": { inactive: "/filter-plaques/return.png", active: "/filter-plaques/return-active.png" },
-  "Выбор": { inactive: "/filter-plaques/choice.png", active: "/filter-plaques/choice-active.png" },
-  "Самоощущение": { inactive: "/filter-plaques/self.png", active: "/filter-plaques/self-active.png" },
-  "Коммуникация": {
-    inactive: "/filter-plaques/communication.png",
-    active: "/filter-plaques/communication-active.png"
+  "Все": { inactive: `${baseUrl}filter-plaques/all.png`, active: `${baseUrl}filter-plaques/all-active.png` },
+  "Намерения": {
+    inactive: `${baseUrl}filter-plaques/intentions.png`,
+    active: `${baseUrl}filter-plaques/intentions-active.png`
   },
-  "Границы": { inactive: "/filter-plaques/boundaries.png", active: "/filter-plaques/boundaries-active.png" },
-  "Переход": { inactive: "/filter-plaques/transition.png", active: "/filter-plaques/transition-active.png" }
+  "Пауза": { inactive: `${baseUrl}filter-plaques/pause.png`, active: `${baseUrl}filter-plaques/pause-active.png` },
+  "Возвращение": {
+    inactive: `${baseUrl}filter-plaques/return.png`,
+    active: `${baseUrl}filter-plaques/return-active.png`
+  },
+  "Выбор": { inactive: `${baseUrl}filter-plaques/choice.png`, active: `${baseUrl}filter-plaques/choice-active.png` },
+  "Самоощущение": { inactive: `${baseUrl}filter-plaques/self.png`, active: `${baseUrl}filter-plaques/self-active.png` },
+  "Коммуникация": {
+    inactive: `${baseUrl}filter-plaques/communication.png`,
+    active: `${baseUrl}filter-plaques/communication-active.png`
+  },
+  "Границы": {
+    inactive: `${baseUrl}filter-plaques/boundaries.png`,
+    active: `${baseUrl}filter-plaques/boundaries-active.png`
+  },
+  "Переход": {
+    inactive: `${baseUrl}filter-plaques/transition.png`,
+    active: `${baseUrl}filter-plaques/transition-active.png`
+  }
 };
 
 export function renderApp(root: HTMLElement): void {

@@ -1,6 +1,8 @@
 export type ArcanaType = "major" | "minor";
 export type Orientation = "upright";
 
+const baseUrl = import.meta.env.BASE_URL;
+
 export const filterTags = [
   "Все",
   "Намерения",
@@ -139,5 +141,5 @@ export const cards = Object.fromEntries(
 ) as Record<TarotCardId, TarotCard>;
 
 export const tarotImageManifest = Object.fromEntries(
-  tarotCardDefinitions.map((definition) => [definition.id, `/cards/${definition.fileName}`])
+  tarotCardDefinitions.map((definition) => [definition.id, `${baseUrl}cards/${definition.fileName}`])
 ) as Record<TarotCardId, string>;

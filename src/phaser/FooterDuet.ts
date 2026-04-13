@@ -3,7 +3,7 @@ import { interfaceAudio } from "../ui/audio";
 
 const FOOTER_SCENE_KEY = "witch-board-footer";
 const FOOTER_TEXTURE_KEY = "witch-board-surface";
-const FOOTER_TEXTURE_URL = "/footer-textures/witch-board-surface.png";
+const FOOTER_TEXTURE_URL = `${import.meta.env.BASE_URL}footer-textures/witch-board-surface.png`;
 const FOOTER_SCENE_WIDTH = 720;
 const FOOTER_SCENE_HEIGHT = 420;
 const VERDICT_STORAGE_KEY = "speaking-arcanes:footer-last-verdict";
