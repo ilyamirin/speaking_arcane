@@ -11,6 +11,11 @@ import { buildInteractiveFooter } from "../phaser/FooterDuet";
 import { SpreadCanvas } from "../phaser/SpreadScene";
 import { interfaceAudio } from "./audio";
 
+export interface PageContext {
+  mode: "home" | "spread-detail";
+  spreadSlug?: string;
+}
+
 interface RuntimeLine {
   id: string;
   speakerName: string;
@@ -36,6 +41,12 @@ interface SpreadRuntime {
   scrubberElement: HTMLInputElement;
   hydrationState: "poster" | "hydrating" | "live";
   hydrationTaskId: number | null;
+}
+
+interface RelatedSpreadLink {
+  slug: string;
+  question: string;
+  tags: FilterTag[];
 }
 
 const runtimeById = new Map<string, SpreadRuntime>();
@@ -73,7 +84,16 @@ const filterImageByTag: Record<FilterTag, { inactive: string; active: string }> 
   }
 };
 
-export function renderApp(root: HTMLElement): void {
+export function renderApp(root: HTMLElement, pageContext: PageContext = { mode: "home" }): void {
+  if (pageContext.mode === "spread-detail" && pageContext.spreadSlug) {
+    renderSpreadDetailApp(root, pageContext.spreadSlug);
+    return;
+  }
+
+  renderHomeApp(root);
+}
+
+function renderHomeApp(root: HTMLElement): void {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let activeFilter: FilterTag = readStoredFilter();
   let allFilteredSpreads: SpreadPost[] = [];
@@ -84,7 +104,7 @@ export function renderApp(root: HTMLElement): void {
   let pruneQueued = false;
 
   root.innerHTML = "";
-  root.appendChild(buildShell());
+  root.appendChild(buildHomeShell());
 
   const filterRow = root.querySelector<HTMLElement>("[data-filter-row]");
   const feed = root.querySelector<HTMLElement>("[data-feed]");
@@ -220,7 +240,7 @@ export function renderApp(root: HTMLElement): void {
     const fragment = document.createDocumentFragment();
 
     nextSpreads.forEach((spread) => {
-      const section = buildSpreadSection(spread);
+      const section = buildSpreadSection(spread, reducedMotion);
       fragment.append(section);
       hydrateObserver?.observe(section);
     });
@@ -244,167 +264,7 @@ export function renderApp(root: HTMLElement): void {
   };
 
   function buildSpreadSection(spread: SpreadPost): HTMLElement {
-    const lines = mergeDialogue(spread);
-    const section = document.createElement("article");
-    section.className = "spread";
-    section.id = spread.slug;
-    section.dataset.spreadId = spread.id;
-
-    const header = document.createElement("header");
-    header.className = "spread__header";
-    header.innerHTML = `
-      <p class="spread__kicker">${spread.tags.filter((tag) => tag !== "Все").join(" · ")}</p>
-      <h2 class="spread__question">${spread.question}</h2>
-      ${spread.introNote ? `<p class="spread__intro">${spread.introNote}</p>` : ""}
-    `;
-
-    const stageShell = document.createElement("div");
-    stageShell.className = "spread__stage-shell";
-    stageShell.tabIndex = 0;
-    stageShell.setAttribute("aria-label", `Сцена расклада: ${spread.question}`);
-
-    const stage = document.createElement("div");
-    stage.className = "spread__stage";
-    stage.setAttribute(
-      "aria-label",
-      `Расклад из трёх карт: ${spread.cards.map((card) => card.nameRu).join(", ")}`
-    );
-    stage.setAttribute("role", "img");
-
-    const poster = buildStagePoster(spread);
-    const stageScene = document.createElement("div");
-    stageScene.className = "spread__stage-scene";
-    stage.append(poster.element, stageScene);
-
-    const overlay = document.createElement("div");
-    overlay.className = "spread__overlay";
-
-    const nav = document.createElement("div");
-    nav.className = "spread__nav";
-
-    const backZone = document.createElement("button");
-    backZone.type = "button";
-    backZone.className = "spread__nav-zone spread__nav-zone--back";
-    backZone.tabIndex = -1;
-    backZone.setAttribute("aria-hidden", "true");
-
-    const forwardZone = document.createElement("button");
-    forwardZone.type = "button";
-    forwardZone.className = "spread__nav-zone spread__nav-zone--forward";
-    forwardZone.tabIndex = -1;
-    forwardZone.setAttribute("aria-hidden", "true");
-
-    nav.append(backZone, forwardZone);
-
-    const legend = document.createElement("div");
-    legend.className = "spread__legend";
-    legend.innerHTML = spread.cards
-      .map(
-        (card, index) => `
-          <span class="legend-card">
-            <span class="legend-card__index">0${index + 1}</span>
-            <span>${card.nameRu}</span>
-          </span>
-        `
-      )
-      .join("");
-
-    overlay.append(legend);
-    stageShell.append(stage, nav, overlay);
-
-    const dialoguePanel = document.createElement("section");
-    dialoguePanel.className = "spread__dialogue-panel";
-
-    const bubble = document.createElement("div");
-    bubble.className = "spread__bubble spread__bubble--card";
-    bubble.setAttribute("aria-live", "polite");
-    bubble.innerHTML = `
-      <p class="spread__bubble-speaker"></p>
-      <p class="spread__bubble-text"></p>
-    `;
-
-    const scrubber = document.createElement("input");
-    scrubber.className = "spread__scrubber";
-    scrubber.type = "range";
-    scrubber.min = "0";
-    scrubber.max = String(lines.length - 1);
-    scrubber.step = "1";
-    scrubber.value = "0";
-    scrubber.setAttribute("aria-label", `Таймлайн диалога расклада: ${spread.question}`);
-
-    dialoguePanel.append(bubble, scrubber);
-    section.append(header, stageShell, dialoguePanel);
-
-    const runtime: SpreadRuntime = {
-      spread,
-      activeIndex: 0,
-      lines,
-      canvas: null,
-      sectionElement: section,
-      stageShellElement: stageShell,
-      stageElement: stage,
-      stageSceneElement: stageScene,
-      posterElement: poster.element,
-      posterCardElements: poster.cardsById,
-      bubbleElement: bubble,
-      bubbleSpeakerElement: bubble.querySelector<HTMLElement>(".spread__bubble-speaker")!,
-      bubbleTextElement: bubble.querySelector<HTMLElement>(".spread__bubble-text")!,
-      scrubberElement: scrubber,
-      hydrationState: "poster",
-      hydrationTaskId: null
-    };
-
-    runtimeById.set(spread.id, runtime);
-    updateDialogueState(runtime, reducedMotion);
-
-    backZone.addEventListener("click", () => {
-      interfaceAudio.unlock();
-      moveByStep(runtime, -1, reducedMotion);
-    });
-
-    forwardZone.addEventListener("click", () => {
-      interfaceAudio.unlock();
-      moveByStep(runtime, 1, reducedMotion);
-    });
-
-    stageShell.addEventListener("keydown", (event) => {
-      if (!(event.target instanceof HTMLElement) || event.target !== stageShell) {
-        return;
-      }
-
-      if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        interfaceAudio.unlock();
-        moveByStep(runtime, -1, reducedMotion);
-        return;
-      }
-
-      if (event.key === "ArrowRight") {
-        event.preventDefault();
-        interfaceAudio.unlock();
-        moveByStep(runtime, 1, reducedMotion);
-        return;
-      }
-
-      if (event.key === "Home") {
-        event.preventDefault();
-        interfaceAudio.unlock();
-        moveToIndex(runtime, 0, reducedMotion);
-        return;
-      }
-
-      if (event.key === "End") {
-        event.preventDefault();
-        interfaceAudio.unlock();
-        moveToIndex(runtime, runtime.lines.length - 1, reducedMotion);
-      }
-    });
-
-    scrubber.addEventListener("input", () => {
-      moveToIndex(runtime, Number(scrubber.value), reducedMotion, false);
-    });
-
-    return section;
+    return createSpreadSection(spread, reducedMotion);
   }
 
   function scheduleCanvasPrune(): void {
@@ -492,6 +352,237 @@ export function renderApp(root: HTMLElement): void {
   renderFeed();
 }
 
+function renderSpreadDetailApp(root: HTMLElement, spreadSlug: string): void {
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const spread = spreads.find((item) => item.slug === spreadSlug);
+  root.innerHTML = "";
+
+  if (!spread) {
+    root.appendChild(buildNotFoundShell());
+    return;
+  }
+
+  const relatedSpreads = selectRelatedSpreads(spread);
+  const shell = document.createElement("div");
+  shell.className = "page-shell";
+  shell.innerHTML = `
+    <main class="page page--detail">
+      <nav class="detail-nav" aria-label="Навигация по раскладу">
+        <a class="detail-nav__link" href="${baseUrl}">Все расклады</a>
+      </nav>
+      <section class="detail-hero">
+        <p class="detail-hero__eyebrow">Speaking Arcane</p>
+        <h1 class="detail-hero__title">${spread.question}</h1>
+        <p class="detail-hero__lede">${spread.introNote ?? "Этот расклад читается как короткая сцена из трёх карт, где смысл проступает через их спор."}</p>
+        <div class="detail-hero__summary">
+          <p class="detail-hero__summary-label">Краткое толкование</p>
+          <p class="detail-hero__summary-text">${spread.interpreterSummary}</p>
+        </div>
+      </section>
+      <section class="detail-main" data-detail-main></section>
+      <section class="detail-related" aria-labelledby="detail-related-title">
+        <div class="detail-related__header">
+          <p class="detail-related__eyebrow">Ещё расклады</p>
+          <h2 id="detail-related-title" class="detail-related__title">Рядом по смыслу</h2>
+        </div>
+        <div class="detail-related__grid" data-detail-related></div>
+      </section>
+      <section data-footer-root></section>
+    </main>
+  `;
+
+  const detailMain = shell.querySelector<HTMLElement>("[data-detail-main]");
+  const relatedRoot = shell.querySelector<HTMLElement>("[data-detail-related]");
+  const footerRoot = shell.querySelector<HTMLElement>("[data-footer-root]");
+
+  if (!detailMain || !relatedRoot || !footerRoot) {
+    throw new Error("Detail page shell is incomplete.");
+  }
+
+  const spreadSection = createSpreadSection(spread, reducedMotion, false);
+  spreadSection.classList.add("spread--detail");
+  detailMain.append(spreadSection);
+
+  relatedSpreads.forEach((item) => {
+    const link = document.createElement("a");
+    link.className = "detail-related__card";
+    link.href = `${baseUrl}spreads/${item.slug}/`;
+    link.innerHTML = `
+      <p class="detail-related__tags">${item.tags.filter((tag) => tag !== "Все").join(" · ")}</p>
+      <p class="detail-related__question">${item.question}</p>
+    `;
+    relatedRoot.append(link);
+  });
+
+  footerRoot.replaceChildren(buildInteractiveFooter(reducedMotion));
+  root.append(shell);
+}
+
+function createSpreadSection(spread: SpreadPost, reducedMotion: boolean, linkQuestion = true): HTMLElement {
+  const lines = mergeDialogue(spread);
+  const section = document.createElement("article");
+  section.className = "spread";
+  section.id = spread.slug;
+  section.dataset.spreadId = spread.id;
+
+  const questionMarkup = linkQuestion
+    ? `<a class="spread__question-link" href="${baseUrl}spreads/${spread.slug}/">${spread.question}</a>`
+    : spread.question;
+
+  const header = document.createElement("header");
+  header.className = "spread__header";
+  header.innerHTML = `
+    <p class="spread__kicker">${spread.tags.filter((tag) => tag !== "Все").join(" · ")}</p>
+    <h2 class="spread__question">${questionMarkup}</h2>
+    ${spread.introNote ? `<p class="spread__intro">${spread.introNote}</p>` : ""}
+  `;
+
+  const stageShell = document.createElement("div");
+  stageShell.className = "spread__stage-shell";
+  stageShell.tabIndex = 0;
+  stageShell.setAttribute("aria-label", `Сцена расклада: ${spread.question}`);
+
+  const stage = document.createElement("div");
+  stage.className = "spread__stage";
+  stage.setAttribute("aria-label", `Расклад из трёх карт: ${spread.cards.map((card) => card.nameRu).join(", ")}`);
+  stage.setAttribute("role", "img");
+
+  const poster = buildStagePoster(spread);
+  const stageScene = document.createElement("div");
+  stageScene.className = "spread__stage-scene";
+  stage.append(poster.element, stageScene);
+
+  const overlay = document.createElement("div");
+  overlay.className = "spread__overlay";
+
+  const nav = document.createElement("div");
+  nav.className = "spread__nav";
+
+  const backZone = document.createElement("button");
+  backZone.type = "button";
+  backZone.className = "spread__nav-zone spread__nav-zone--back";
+  backZone.tabIndex = -1;
+  backZone.setAttribute("aria-hidden", "true");
+
+  const forwardZone = document.createElement("button");
+  forwardZone.type = "button";
+  forwardZone.className = "spread__nav-zone spread__nav-zone--forward";
+  forwardZone.tabIndex = -1;
+  forwardZone.setAttribute("aria-hidden", "true");
+
+  nav.append(backZone, forwardZone);
+
+  const legend = document.createElement("div");
+  legend.className = "spread__legend";
+  legend.innerHTML = spread.cards
+    .map(
+      (card, index) => `
+        <span class="legend-card">
+          <span class="legend-card__index">0${index + 1}</span>
+          <span>${card.nameRu}</span>
+        </span>
+      `
+    )
+    .join("");
+
+  overlay.append(legend);
+  stageShell.append(stage, nav, overlay);
+
+  const dialoguePanel = document.createElement("section");
+  dialoguePanel.className = "spread__dialogue-panel";
+
+  const bubble = document.createElement("div");
+  bubble.className = "spread__bubble spread__bubble--card";
+  bubble.setAttribute("aria-live", "polite");
+  bubble.innerHTML = `
+    <p class="spread__bubble-speaker"></p>
+    <p class="spread__bubble-text"></p>
+  `;
+
+  const scrubber = document.createElement("input");
+  scrubber.className = "spread__scrubber";
+  scrubber.type = "range";
+  scrubber.min = "0";
+  scrubber.max = String(lines.length - 1);
+  scrubber.step = "1";
+  scrubber.value = "0";
+  scrubber.setAttribute("aria-label", `Таймлайн диалога расклада: ${spread.question}`);
+
+  dialoguePanel.append(bubble, scrubber);
+  section.append(header, stageShell, dialoguePanel);
+
+  const runtime: SpreadRuntime = {
+    spread,
+    activeIndex: 0,
+    lines,
+    canvas: null,
+    sectionElement: section,
+    stageShellElement: stageShell,
+    stageElement: stage,
+    stageSceneElement: stageScene,
+    posterElement: poster.element,
+    posterCardElements: poster.cardsById,
+    bubbleElement: bubble,
+    bubbleSpeakerElement: bubble.querySelector<HTMLElement>(".spread__bubble-speaker")!,
+    bubbleTextElement: bubble.querySelector<HTMLElement>(".spread__bubble-text")!,
+    scrubberElement: scrubber,
+    hydrationState: "poster",
+    hydrationTaskId: null
+  };
+
+  runtimeById.set(spread.id, runtime);
+  updateDialogueState(runtime, reducedMotion);
+
+  backZone.addEventListener("click", () => {
+    interfaceAudio.unlock();
+    moveByStep(runtime, -1, reducedMotion);
+  });
+
+  forwardZone.addEventListener("click", () => {
+    interfaceAudio.unlock();
+    moveByStep(runtime, 1, reducedMotion);
+  });
+
+  stageShell.addEventListener("keydown", (event) => {
+    if (!(event.target instanceof HTMLElement) || event.target !== stageShell) {
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      interfaceAudio.unlock();
+      moveByStep(runtime, -1, reducedMotion);
+      return;
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      interfaceAudio.unlock();
+      moveByStep(runtime, 1, reducedMotion);
+      return;
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      interfaceAudio.unlock();
+      moveToIndex(runtime, 0, reducedMotion);
+      return;
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      interfaceAudio.unlock();
+      moveToIndex(runtime, runtime.lines.length - 1, reducedMotion);
+    }
+  });
+
+  scrubber.addEventListener("input", () => {
+    moveToIndex(runtime, Number(scrubber.value), reducedMotion, false);
+  });
+
+  return section;
+}
+
 function readStoredFilter(): FilterTag {
   try {
     const storedValue = window.localStorage.getItem(ACTIVE_FILTER_STORAGE_KEY);
@@ -513,7 +604,7 @@ function isFilterTag(value: string | null): value is FilterTag {
   return value !== null && filterTags.includes(value as FilterTag);
 }
 
-function buildShell(): HTMLElement {
+function buildHomeShell(): HTMLElement {
   const shell = document.createElement("div");
   shell.className = "page-shell";
   shell.innerHTML = `
@@ -527,8 +618,9 @@ function buildShell(): HTMLElement {
           <span class="hero__title-line">сказанный тихо.</span>
         </h1>
         <p class="hero__lede">
-          Это тихий блог раскладов Таро Уэйта. Здесь расклад звучит как короткая сцена:
-          сначала смотри на карты, потом слушай, как они спорят между собой.
+          Это тихий блог раскладов Таро Уэйта о любви, отношениях, паузах и возвращениях.
+          Здесь каждый вопрос читается как короткая сцена: сначала смотри на карты, потом
+          слушай, как они спорят между собой.
         </p>
         <div class="hero__meta">
           <p>Коснись левой половины сцены, чтобы вернуться на шаг назад. Правой — чтобы двинуть разговор дальше.</p>
@@ -540,6 +632,25 @@ function buildShell(): HTMLElement {
       </section>
       <section class="feed" data-feed></section>
       <section data-footer-root></section>
+    </main>
+  `;
+
+  return shell;
+}
+
+function buildNotFoundShell(): HTMLElement {
+  const shell = document.createElement("div");
+  shell.className = "page-shell";
+  shell.innerHTML = `
+    <main class="page page--detail">
+      <nav class="detail-nav" aria-label="Навигация по раскладу">
+        <a class="detail-nav__link" href="${baseUrl}">Все расклады</a>
+      </nav>
+      <section class="detail-hero detail-hero--compact">
+        <p class="detail-hero__eyebrow">Speaking Arcane</p>
+        <h1 class="detail-hero__title">Этот расклад не найден.</h1>
+        <p class="detail-hero__lede">Возможно, ссылка устарела. На главной все расклады остаются в одной длинной ленте.</p>
+      </section>
     </main>
   `;
 
@@ -639,6 +750,37 @@ function buildStagePoster(spread: SpreadPost): {
   });
 
   return { element: poster, cardsById };
+}
+
+function selectRelatedSpreads(currentSpread: SpreadPost): RelatedSpreadLink[] {
+  const currentIndex = spreads.findIndex((entry) => entry.slug === currentSpread.slug);
+  const currentTags = currentSpread.tags.filter((tag) => tag !== "Все");
+  const ranked = spreads
+    .filter((spread) => spread.slug !== currentSpread.slug)
+    .map((spread, index) => {
+      const sharedTags = spread.tags.filter((tag) => tag !== "Все" && currentTags.includes(tag)).length;
+      const spreadIndex = spreads.findIndex((entry) => entry.slug === spread.slug);
+      const distance = Math.abs(spreadIndex - currentIndex);
+
+      return {
+        spread,
+        sharedTags,
+        distance
+      };
+    })
+    .sort((left, right) => {
+      if (right.sharedTags !== left.sharedTags) {
+        return right.sharedTags - left.sharedTags;
+      }
+
+      return left.distance - right.distance;
+    });
+
+  return ranked.slice(0, 3).map(({ spread }) => ({
+    slug: spread.slug,
+    question: spread.question,
+    tags: spread.tags
+  }));
 }
 
 function updatePosterState(runtime: SpreadRuntime, activeCardId: TarotCard["id"]): void {
