@@ -23,6 +23,7 @@ interface SpreadRuntime {
 }
 
 const runtimeById = new Map<string, SpreadRuntime>();
+const ACTIVE_FILTER_STORAGE_KEY = "speaking-arcanes:active-filter";
 
 const filterImageByTag: Record<FilterTag, { inactive: string; active: string }> = {
   "Все": { inactive: "/filter-plaques/all.png", active: "/filter-plaques/all-active.png" },
@@ -35,7 +36,7 @@ const filterImageByTag: Record<FilterTag, { inactive: string; active: string }> 
 
 export function renderApp(root: HTMLElement): void {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let activeFilter: FilterTag = "Все";
+  let activeFilter: FilterTag = readStoredFilter();
 
   root.innerHTML = "";
   root.appendChild(buildShell());
@@ -92,6 +93,7 @@ export function renderApp(root: HTMLElement): void {
         interfaceAudio.unlock();
         interfaceAudio.play("filter");
         activeFilter = tag;
+        storeActiveFilter(tag);
         renderFeed();
       });
       filterRow.appendChild(button);
@@ -105,6 +107,27 @@ export function renderApp(root: HTMLElement): void {
   };
 
   renderFeed();
+}
+
+function readStoredFilter(): FilterTag {
+  try {
+    const storedValue = window.localStorage.getItem(ACTIVE_FILTER_STORAGE_KEY);
+    return isFilterTag(storedValue) ? storedValue : "Все";
+  } catch {
+    return "Все";
+  }
+}
+
+function storeActiveFilter(tag: FilterTag): void {
+  try {
+    window.localStorage.setItem(ACTIVE_FILTER_STORAGE_KEY, tag);
+  } catch {
+    // Ignore storage failures so filtering still works in restricted browsers.
+  }
+}
+
+function isFilterTag(value: string | null): value is FilterTag {
+  return value !== null && filterTags.includes(value as FilterTag);
 }
 
 function buildShell(): HTMLElement {
