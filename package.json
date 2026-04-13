@@ -1,11 +1,11 @@
 {
-  "name": "speaking-arcanes",
+  "name": "speaking-arcane",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "node ./scripts/validate-content.mjs && tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {

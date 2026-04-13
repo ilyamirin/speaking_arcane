@@ -1,4 +1,5 @@
-import { filterTags, spreads, type DialogueLine, type FilterTag, type SpreadPost } from "../content/spreads";
+import { filterTags, type DialogueLine, type FilterTag, type SpreadPost, type TarotCard } from "../content/cards";
+import { spreads } from "../content/spreads";
 import { buildInteractiveFooter } from "../phaser/FooterDuet";
 import { SpreadCanvas } from "../phaser/SpreadScene";
 import { interfaceAudio } from "./audio";
@@ -7,7 +8,7 @@ interface RuntimeLine {
   id: string;
   speakerName: string;
   text: string;
-  focusCardId: string;
+  focusCardId: TarotCard["id"];
   kind: "card" | "interpreter";
 }
 
@@ -31,7 +32,13 @@ const filterImageByTag: Record<FilterTag, { inactive: string; active: string }> 
   "Пауза": { inactive: "/filter-plaques/pause.png", active: "/filter-plaques/pause-active.png" },
   "Возвращение": { inactive: "/filter-plaques/return.png", active: "/filter-plaques/return-active.png" },
   "Выбор": { inactive: "/filter-plaques/choice.png", active: "/filter-plaques/choice-active.png" },
-  "Самоощущение": { inactive: "/filter-plaques/self.png", active: "/filter-plaques/self-active.png" }
+  "Самоощущение": { inactive: "/filter-plaques/self.png", active: "/filter-plaques/self-active.png" },
+  "Коммуникация": {
+    inactive: "/filter-plaques/communication.png",
+    active: "/filter-plaques/communication-active.png"
+  },
+  "Границы": { inactive: "/filter-plaques/boundaries.png", active: "/filter-plaques/boundaries-active.png" },
+  "Переход": { inactive: "/filter-plaques/transition.png", active: "/filter-plaques/transition-active.png" }
 };
 
 export function renderApp(root: HTMLElement): void {
@@ -136,7 +143,7 @@ function buildShell(): HTMLElement {
   shell.innerHTML = `
     <main class="page">
       <section class="hero">
-        <p class="hero__eyebrow">Speaking Arcanes</p>
+        <p class="hero__eyebrow">Speaking Arcane</p>
         <h1 class="hero__title">
           <span class="hero__title-line">Три карты.</span>
           <span class="hero__title-line">Их спор.</span>

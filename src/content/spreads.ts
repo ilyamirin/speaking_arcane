@@ -1,546 +1,958 @@
-export type ArcanaType = "major" | "minor";
-export type Orientation = "upright";
-export type FilterTag =
-  | "Все"
-  | "Намерения"
-  | "Пауза"
-  | "Возвращение"
-  | "Выбор"
-  | "Самоощущение";
+import {
+  cards,
+  filterTags,
+  tarotImageManifest,
+  type DialogueLine,
+  type FilterTag,
+  type SpreadPost,
+  type TarotCardId
+} from "./cards";
 
-export interface TarotCard {
-  id: string;
-  nameRu: string;
-  imageKey: string;
-  arcanaType: ArcanaType;
-  orientation: Orientation;
-}
+type DialogueSeed = readonly [TarotCardId, string, TarotCardId?];
 
-export interface DialogueLine {
-  id: string;
-  speakerCardId: TarotCard["id"];
-  text: string;
-  tone: "тёмная-нежность";
-  focusCardId: TarotCard["id"];
-}
-
-export interface SpreadPost {
+interface SpreadSeed {
   id: string;
   slug: string;
   question: string;
   tags: FilterTag[];
-  cards: [TarotCard, TarotCard, TarotCard];
-  dialogue: DialogueLine[];
+  cardIds: [TarotCardId, TarotCardId, TarotCardId];
+  dialogue: DialogueSeed[];
   interpreterSummary: string;
   introNote?: string;
 }
 
-export const filterTags: FilterTag[] = [
-  "Все",
-  "Намерения",
-  "Пауза",
-  "Возвращение",
-  "Выбор",
-  "Самоощущение"
-];
+const EXPECTED_SPREAD_COUNT = 51;
+const DEFAULT_TONE = "тёмная-нежность" as const;
 
-export const tarotImageManifest = {
-  lovers: "/cards/lovers.jpg",
-  chariot: "/cards/chariot.jpg",
-  twoOfCups: "/cards/two-of-cups.jpg",
-  hermit: "/cards/hermit.jpg",
-  moon: "/cards/moon.jpg",
-  eightOfWands: "/cards/eight-of-wands.jpg",
-  devil: "/cards/devil.jpg",
-  strength: "/cards/strength.jpg",
-  twoOfSwords: "/cards/two-of-swords.jpg",
-  judgement: "/cards/judgement.jpg",
-  sixOfCups: "/cards/six-of-cups.jpg",
-  justice: "/cards/justice.jpg",
-  highPriestess: "/cards/high-priestess.jpg",
-  star: "/cards/star.jpg",
-  nineOfSwords: "/cards/nine-of-swords.jpg"
-} as const;
+function d(speakerCardId: TarotCardId, text: string, focusCardId: TarotCardId = speakerCardId): DialogueSeed {
+  return [speakerCardId, text, focusCardId];
+}
 
-const cards = {
-  lovers: {
-    id: "lovers",
-    nameRu: "Влюблённые",
-    imageKey: "lovers",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  chariot: {
-    id: "chariot",
-    nameRu: "Колесница",
-    imageKey: "chariot",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  twoOfCups: {
-    id: "twoOfCups",
-    nameRu: "Двойка Кубков",
-    imageKey: "twoOfCups",
-    arcanaType: "minor",
-    orientation: "upright"
-  },
-  hermit: {
-    id: "hermit",
-    nameRu: "Отшельник",
-    imageKey: "hermit",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  moon: {
-    id: "moon",
-    nameRu: "Луна",
-    imageKey: "moon",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  eightOfWands: {
-    id: "eightOfWands",
-    nameRu: "Восьмёрка Жезлов",
-    imageKey: "eightOfWands",
-    arcanaType: "minor",
-    orientation: "upright"
-  },
-  devil: {
-    id: "devil",
-    nameRu: "Дьявол",
-    imageKey: "devil",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  strength: {
-    id: "strength",
-    nameRu: "Сила",
-    imageKey: "strength",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  twoOfSwords: {
-    id: "twoOfSwords",
-    nameRu: "Двойка Мечей",
-    imageKey: "twoOfSwords",
-    arcanaType: "minor",
-    orientation: "upright"
-  },
-  judgement: {
-    id: "judgement",
-    nameRu: "Суд",
-    imageKey: "judgement",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  sixOfCups: {
-    id: "sixOfCups",
-    nameRu: "Шестёрка Кубков",
-    imageKey: "sixOfCups",
-    arcanaType: "minor",
-    orientation: "upright"
-  },
-  justice: {
-    id: "justice",
-    nameRu: "Справедливость",
-    imageKey: "justice",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  highPriestess: {
-    id: "highPriestess",
-    nameRu: "Верховная Жрица",
-    imageKey: "highPriestess",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  star: {
-    id: "star",
-    nameRu: "Звезда",
-    imageKey: "star",
-    arcanaType: "major",
-    orientation: "upright"
-  },
-  nineOfSwords: {
-    id: "nineOfSwords",
-    nameRu: "Девятка Мечей",
-    imageKey: "nineOfSwords",
-    arcanaType: "minor",
-    orientation: "upright"
+function buildSpread(seed: SpreadSeed): SpreadPost {
+  const [firstCardId, secondCardId, thirdCardId] = seed.cardIds;
+
+  return {
+    id: seed.id,
+    slug: seed.slug,
+    question: seed.question,
+    tags: seed.tags,
+    cards: [cards[firstCardId], cards[secondCardId], cards[thirdCardId]],
+    dialogue: seed.dialogue.map((line, index) => buildDialogueLine(seed.id, index, line)),
+    interpreterSummary: seed.interpreterSummary,
+    introNote: seed.introNote
+  };
+}
+
+function buildDialogueLine(spreadId: string, index: number, line: DialogueSeed): DialogueLine {
+  const [speakerCardId, text, focusCardId = speakerCardId] = line;
+
+  return {
+    id: `${spreadId}-line-${index + 1}`,
+    speakerCardId,
+    text,
+    tone: DEFAULT_TONE,
+    focusCardId
+  };
+}
+
+function validateSpreads(candidateSpreads: SpreadPost[]): SpreadPost[] {
+  if (candidateSpreads.length !== EXPECTED_SPREAD_COUNT) {
+    throw new Error(`Expected ${EXPECTED_SPREAD_COUNT} spreads, received ${candidateSpreads.length}.`);
   }
-} satisfies Record<string, TarotCard>;
 
-export const spreads: SpreadPost[] = [
+  const knownTags = new Set<FilterTag>(filterTags);
+  const knownCardIds = new Set(Object.keys(cards) as TarotCardId[]);
+  const seenIds = new Set<string>();
+  const seenSlugs = new Set<string>();
+  const seenTriplets = new Set<string>();
+
+  candidateSpreads.forEach((spread) => {
+    if (seenIds.has(spread.id)) {
+      throw new Error(`Duplicate spread id: ${spread.id}`);
+    }
+    seenIds.add(spread.id);
+
+    if (seenSlugs.has(spread.slug)) {
+      throw new Error(`Duplicate spread slug: ${spread.slug}`);
+    }
+    seenSlugs.add(spread.slug);
+
+    if (spread.cards.length !== 3) {
+      throw new Error(`Spread ${spread.id} must contain exactly three cards.`);
+    }
+
+    if (spread.dialogue.length < 4 || spread.dialogue.length > 5) {
+      throw new Error(`Spread ${spread.id} must contain 4-5 dialogue lines.`);
+    }
+
+    if (!spread.tags.includes("Все")) {
+      throw new Error(`Spread ${spread.id} must include the universal tag "Все".`);
+    }
+
+    spread.tags.forEach((tag) => {
+      if (!knownTags.has(tag)) {
+        throw new Error(`Spread ${spread.id} uses an unknown tag: ${tag}`);
+      }
+    });
+
+    const spreadCardIds = spread.cards.map((card) => card.id) as TarotCardId[];
+    const spreadCardSet = new Set(spreadCardIds);
+    const tripletKey = [...spreadCardIds].sort().join("|");
+
+    if (seenTriplets.has(tripletKey)) {
+      throw new Error(`Spread ${spread.id} repeats the card triplet ${tripletKey}.`);
+    }
+    seenTriplets.add(tripletKey);
+
+    spread.cards.forEach((card) => {
+      if (!knownCardIds.has(card.id)) {
+        throw new Error(`Spread ${spread.id} references an unknown card id: ${card.id}`);
+      }
+
+      if (!tarotImageManifest[card.imageKey]) {
+        throw new Error(`Spread ${spread.id} references a missing image for ${card.imageKey}.`);
+      }
+    });
+
+    spread.dialogue.forEach((line) => {
+      if (!spreadCardSet.has(line.speakerCardId)) {
+        throw new Error(`Spread ${spread.id} uses speaker ${line.speakerCardId} outside its three cards.`);
+      }
+
+      if (!spreadCardSet.has(line.focusCardId)) {
+        throw new Error(`Spread ${spread.id} uses focus ${line.focusCardId} outside its three cards.`);
+      }
+    });
+  });
+
+  return candidateSpreads;
+}
+
+const spreadSeeds: SpreadSeed[] = [
   {
     id: "spread-after-date",
     slug: "after-date-second-meeting",
     question: "После свидания непонятно, захочет ли он увидеться ещё раз?",
     tags: ["Все", "Намерения"],
-    introNote:
-      "Слушай не только смысл слов, но и то, какая карта сейчас говорит громче остальных.",
-    cards: [cards.lovers, cards.chariot, cards.twoOfCups],
+    introNote: "Этот расклад не о правилах переписки. Он о том, двинется ли связь дальше по-настоящему.",
+    cardIds: ["lovers", "chariot", "twoOfCups"],
     dialogue: [
-      {
-        id: "line-1",
-        speakerCardId: "lovers",
-        focusCardId: "lovers",
-        tone: "тёмная-нежность",
-        text: "Он уже почувствовал притяжение. Не космическое, а очень земное, с памятью о твоём взгляде."
-      },
-      {
-        id: "line-2",
-        speakerCardId: "chariot",
-        focusCardId: "chariot",
-        tone: "тёмная-нежность",
-        text: "Притяжение ещё не обещание. Мужчина может хотеть подъехать ближе и всё равно держать поводья натянутыми."
-      },
-      {
-        id: "line-3",
-        speakerCardId: "twoOfCups",
-        focusCardId: "twoOfCups",
-        tone: "тёмная-нежность",
-        text: "Но здесь желание взаимности уже случилось. Он примерил тебя к продолжению, а не к одной красивой ночи."
-      },
-      {
-        id: "line-4",
-        speakerCardId: "chariot",
-        focusCardId: "chariot",
-        tone: "тёмная-нежность",
-        text: "Ему важно выглядеть собранным. Он не любит показывать, что задело сильнее, чем планировал."
-      },
-      {
-        id: "line-5",
-        speakerCardId: "lovers",
-        focusCardId: "lovers",
-        tone: "тёмная-нежность",
-        text: "Поэтому пауза после свидания не равна холоду. Иногда мужчина молчит именно там, где уже выбирает."
-      },
-      {
-        id: "line-6",
-        speakerCardId: "twoOfCups",
-        focusCardId: "twoOfCups",
-        tone: "тёмная-нежность",
-        text: "Если он появится снова, он пойдёт мягко: с простым сообщением, без пафоса, будто между вами ничего не дрогнуло."
-      },
-      {
-        id: "line-7",
-        speakerCardId: "chariot",
-        focusCardId: "chariot",
-        tone: "тёмная-нежность",
-        text: "Но появится. Здесь нет карты ухода. Есть карта контроля над собственным волнением."
-      },
-      {
-        id: "line-8",
-        speakerCardId: "lovers",
-        focusCardId: "lovers",
-        tone: "тёмная-нежность",
-        text: "Скажу проще: ты осталась у него внутри как вариант, который хочется не упустить."
-      },
-      {
-        id: "line-9",
-        speakerCardId: "twoOfCups",
-        focusCardId: "twoOfCups",
-        tone: "тёмная-нежность",
-        text: "И если ответить ему спокойно, без проверки и уколов, встреча почти наверняка получит второе дыхание."
-      }
+      d("lovers", "Между вами уже случилось не только впечатление. Он вышел из встречи не пустым."),
+      d("chariot", "Но сейчас он держит лицо и темп. Ему важно вернуться не дрогнувшим, а собранным."),
+      d("twoOfCups", "Мост здесь простой: не превращать его шаг в экзамен, когда он объявится."),
+      d("chariot", "Если не давить, он сам выберет движение и покажет его действием."),
+      d("twoOfCups", "Тогда второе свидание будет не вежливым добором, а началом взаимного ритма.")
     ],
     interpreterSummary:
-      "Он настроен не на исчезновение, а на продолжение. В его манере будет сдержанность, но сама связка карт говорит о повторной инициативе и о взаимном интересе, который уже успел стать личным."
+      "Это не расклад про исчезновение. Он уже тянется к продолжению, просто идёт к нему через контроль, а не через открытый импульс."
   },
   {
     id: "spread-warm-then-silence",
     slug: "warm-start-then-silence",
     question: "Почему он замолчал после тёплого начала?",
     tags: ["Все", "Пауза"],
-    cards: [cards.eightOfWands, cards.hermit, cards.moon],
+    introNote: "Здесь важно не то, как ярко всё началось, а что он сделал, когда стало по-настоящему близко.",
+    cardIds: ["eightOfWands", "hermit", "moon"],
     dialogue: [
-      {
-        id: "line-1",
-        speakerCardId: "eightOfWands",
-        focusCardId: "eightOfWands",
-        tone: "тёмная-нежность",
-        text: "Сначала всё шло быстро. Он писал как человек, который уже почувствовал вкус ответа."
-      },
-      {
-        id: "line-2",
-        speakerCardId: "moon",
-        focusCardId: "moon",
-        tone: "тёмная-нежность",
-        text: "А потом в него вошла тень. Не обязательно другая женщина. Чаще это собственные страхи, старые и липкие."
-      },
-      {
-        id: "line-3",
-        speakerCardId: "hermit",
-        focusCardId: "hermit",
-        tone: "тёмная-нежность",
-        text: "Он ушёл не в приключение, а в свою внутреннюю комнату без окон. Там мужчины часто делают вид, что им никого не нужно."
-      },
-      {
-        id: "line-4",
-        speakerCardId: "eightOfWands",
-        focusCardId: "eightOfWands",
-        tone: "тёмная-нежность",
-        text: "Ему стало слишком быстро слишком близко. Скорость напугала его сильнее, чем сама связь."
-      },
-      {
-        id: "line-5",
-        speakerCardId: "moon",
-        focusCardId: "moon",
-        tone: "тёмная-нежность",
-        text: "И теперь он сам не уверен, чего боится больше: твоего молчания или твоего настоящего присутствия."
-      },
-      {
-        id: "line-6",
-        speakerCardId: "hermit",
-        focusCardId: "hermit",
-        tone: "тёмная-нежность",
-        text: "Это пауза человека, который переваривает себя. Она неприятна, но она не выглядит как холодное презрение."
-      },
-      {
-        id: "line-7",
-        speakerCardId: "moon",
-        focusCardId: "moon",
-        tone: "тёмная-нежность",
-        text: "Не пытайся вычислить его страх до молекулы. Эта тишина больше о нём, чем о твоей ценности."
-      },
-      {
-        id: "line-8",
-        speakerCardId: "eightOfWands",
-        focusCardId: "eightOfWands",
-        tone: "тёмная-нежность",
-        text: "Если он вернётся, ритм уже не будет таким стремительным. Он попробует идти осторожнее, чем начал."
-      },
-      {
-        id: "line-9",
-        speakerCardId: "hermit",
-        focusCardId: "hermit",
-        tone: "тёмная-нежность",
-        text: "А если не вернётся быстро, всё равно не считай ту первую искру выдумкой. Она была настоящей, просто ему не хватило внутреннего света выдержать её."
-      }
+      d("eightOfWands", "Сначала всё пошло быстрее, чем он сам ожидал, и ему это нравилось."),
+      d("hermit", "Потом он ушёл в привычную внутреннюю комнату, где делает вид, что ему никто не нужен."),
+      d("moon", "Перелом случился не из-за тебя, а из-за страха перед тем, что связь стала реальной."),
+      d("hermit", "Не вытаскивай его оттуда силой. Эта тишина должна показать, умеет ли он выходить сам."),
+      d("moon", "Выход здесь один: верить не в красивый старт, а в то, что он сделает после собственной тьмы.")
     ],
     interpreterSummary:
-      "Замолчал не потому, что ничего не почувствовал, а потому, что почувствовал и испугался скорости сближения. В этом раскладе пауза рождается из внутренней тревоги и закрытости, а не из пустоты."
+      "Он замолчал не потому, что ничего не почувствовал. Он замолчал там, где скорость сближения столкнулась с его внутренней тревогой."
   },
   {
     id: "spread-fear-or-no-continuation",
     slug: "fear-of-intimacy-or-no-continuation",
     question: "Это страх близости или ему просто не нужно продолжение?",
     tags: ["Все", "Намерения", "Выбор"],
-    cards: [cards.devil, cards.strength, cards.twoOfSwords],
+    introNote: "За этим вопросом стоит не будущая развязка, а его текущая способность выдержать живую близость.",
+    cardIds: ["devil", "twoOfSwords", "strength"],
     dialogue: [
-      {
-        id: "line-1",
-        speakerCardId: "devil",
-        focusCardId: "devil",
-        tone: "тёмная-нежность",
-        text: "Его тянет. Не вежливо, не абстрактно, а телом, амбицией и жадностью к впечатлению."
-      },
-      {
-        id: "line-2",
-        speakerCardId: "twoOfSwords",
-        focusCardId: "twoOfSwords",
-        tone: "тёмная-нежность",
-        text: "И всё же он сидит на месте, как будто завязал глаза собственными руками."
-      },
-      {
-        id: "line-3",
-        speakerCardId: "strength",
-        focusCardId: "strength",
-        tone: "тёмная-нежность",
-        text: "Потому что близость для него сейчас не слабое место, а место борьбы. Он боится потерять контроль над собой."
-      },
-      {
-        id: "line-4",
-        speakerCardId: "devil",
-        focusCardId: "devil",
-        tone: "тёмная-нежность",
-        text: "Если бы продолжение было ему не нужно, я бы давно погас. Но я здесь, плотный и горячий."
-      },
-      {
-        id: "line-5",
-        speakerCardId: "strength",
-        focusCardId: "strength",
-        tone: "тёмная-нежность",
-        text: "Ему нужно не отсутствие чувств, а мужество выдержать чувства без бегства и без манипуляции."
-      },
-      {
-        id: "line-6",
-        speakerCardId: "twoOfSwords",
-        focusCardId: "twoOfSwords",
-        tone: "тёмная-нежность",
-        text: "Пока решения нет. Есть зависшее состояние: хочется подойти, но ещё страшно признать цену этого шага."
-      },
-      {
-        id: "line-7",
-        speakerCardId: "devil",
-        focusCardId: "devil",
-        tone: "тёмная-нежность",
-        text: "Не называй это равнодушием. Равнодушие не даёт такого напряжения в воздухе."
-      },
-      {
-        id: "line-8",
-        speakerCardId: "strength",
-        focusCardId: "strength",
-        tone: "тёмная-нежность",
-        text: "Но и романтизировать его страх не нужно. Пока он не выбрал зрелость, тебе достаётся ожидание."
-      },
-      {
-        id: "line-9",
-        speakerCardId: "twoOfSwords",
-        focusCardId: "twoOfSwords",
-        tone: "тёмная-нежность",
-        text: "Ответ такой: дело не в отсутствии желания. Дело в том, что он ещё не решил, способен ли вынести настоящее продолжение."
-      }
+      d("devil", "За вопросом о продолжении стоит не пустота, а сильное и очень земное притяжение."),
+      d("twoOfSwords", "Ключ в том, что он сам себе перекрыл ход и сидит в нерешённости."),
+      d("strength", "Здесь нужен не ещё один намёк от тебя, а его взрослое решение выдержать близость без бегства."),
+      d("devil", "Поэтому не называй это равнодушием. Равнодушие не создаёт такого напряжения."),
+      d("strength", "Первый честный шаг сейчас не спасать его от выбора и не объяснять за него его чувства.")
     ],
     interpreterSummary:
-      "Расклад склоняет к страху близости, а не к простому отсутствию интереса. В нём есть сильное влечение, но мужчина застрял в внутреннем клинче между желанием и контролем."
+      "Здесь больше страха близости, чем пустоты. Влечение живо, но без его зрелого выбора оно будет превращаться для тебя в ожидание."
   },
   {
     id: "spread-ex-second-chance",
     slug: "ex-second-chance",
     question: "Стоит ли давать бывшему ещё один шанс?",
     tags: ["Все", "Возвращение", "Выбор"],
-    cards: [cards.judgement, cards.sixOfCups, cards.justice],
+    introNote: "Этот расклад не спрашивает, скучаете ли вы. Он спрашивает, может ли история вернуться другой.",
+    cardIds: ["sixOfCups", "judgement", "justice"],
     dialogue: [
-      {
-        id: "line-1",
-        speakerCardId: "sixOfCups",
-        focusCardId: "sixOfCups",
-        tone: "тёмная-нежность",
-        text: "Он возвращается не на пустое место. Между вами ещё жив запах старых обещаний."
-      },
-      {
-        id: "line-2",
-        speakerCardId: "judgement",
-        focusCardId: "judgement",
-        tone: "тёмная-нежность",
-        text: "Возвращение здесь действительно возможно. Но я прихожу не ради ностальгии, а ради честного пересмотра."
-      },
-      {
-        id: "line-3",
-        speakerCardId: "justice",
-        focusCardId: "justice",
-        tone: "тёмная-нежность",
-        text: "Именно. Второй шанс без новых правил станет просто красиво подсвеченным повтором старой боли."
-      },
-      {
-        id: "line-4",
-        speakerCardId: "sixOfCups",
-        focusCardId: "sixOfCups",
-        tone: "тёмная-нежность",
-        text: "Сердце, конечно, первым делом тянется к тому, что уже было родным."
-      },
-      {
-        id: "line-5",
-        speakerCardId: "judgement",
-        focusCardId: "judgement",
-        tone: "тёмная-нежность",
-        text: "Но родное должно выдержать правду. Что именно он понял? Что собирается менять? За счёт чего связь станет другой?"
-      },
-      {
-        id: "line-6",
-        speakerCardId: "justice",
-        focusCardId: "justice",
-        tone: "тёмная-нежность",
-        text: "Тебе нельзя входить обратно только потому, что он снова стал тёплым. Нужны ясные действия, а не одно лишь узнаваемое тепло."
-      },
-      {
-        id: "line-7",
-        speakerCardId: "sixOfCups",
-        focusCardId: "sixOfCups",
-        tone: "тёмная-нежность",
-        text: "Память сладка, но она плохой адвокат. Она защищает не будущее, а привычную боль."
-      },
-      {
-        id: "line-8",
-        speakerCardId: "judgement",
-        focusCardId: "judgement",
-        tone: "тёмная-нежность",
-        text: "Если разговор между вами станет взрослым, шанс можно открыть. Если он снова просит просто чувствовать, не разбирая причин, дверь лучше не распахивать."
-      },
-      {
-        id: "line-9",
-        speakerCardId: "justice",
-        focusCardId: "justice",
-        tone: "тёмная-нежность",
-        text: "Так что шанс не запрещён. Но он должен быть выдан не сердцем в сумерках, а твоим ясным решением днём."
-      }
+      d("sixOfCups", "Тянет назад не потому, что всё было хорошо, а потому, что многое осталось недоговорённым."),
+      d("judgement", "Сейчас связь действительно стучится обратно, но не ради ностальгии, а ради пересмотра."),
+      d("justice", "Перелом в одном: вернуться можно только через новые правила и ясные ответы."),
+      d("sixOfCups", "Если открыть из тоски, вы войдёте в ту же боль, только в мягком свете памяти."),
+      d("justice", "Выход здесь смотреть не на узнаваемое тепло, а на зрелые действия и ответственность.")
     ],
     interpreterSummary:
-      "Возврат возможен, но только через честный пересмотр прошлой динамики. Давать шанс стоит не воспоминанию о нём, а только реальным доказательствам того, что мужчина вошёл в разговор и ответственность иначе, чем прежде."
+      "Шанс не запрещён, но он не должен быть выдан прошлому. Его можно дать только новой структуре разговора и поведению, которых раньше не было."
   },
   {
     id: "spread-intuition-knows",
     slug: "intuition-already-knows",
     question: "Что моя интуиция уже знает о нём, а я не решаюсь признать?",
     tags: ["Все", "Самоощущение"],
-    cards: [cards.highPriestess, cards.star, cards.nineOfSwords],
+    introNote: "Сейчас карты говорят не о нём отдельно, а о том, что ты уже поняла глубже собственных оправданий.",
+    cardIds: ["highPriestess", "nineOfSwords", "star"],
     dialogue: [
-      {
-        id: "line-1",
-        speakerCardId: "highPriestess",
-        focusCardId: "highPriestess",
-        tone: "тёмная-нежность",
-        text: "Ты уже многое увидела. Просто пока называешь это тревогой, чтобы не признавать точность своего знания."
-      },
-      {
-        id: "line-2",
-        speakerCardId: "star",
-        focusCardId: "star",
-        tone: "тёмная-нежность",
-        text: "Твоё сердце всё ещё хочет верить в лучший вариант. И в этом нет стыда."
-      },
-      {
-        id: "line-3",
-        speakerCardId: "nineOfSwords",
-        focusCardId: "nineOfSwords",
-        tone: "тёмная-нежность",
-        text: "Но ночами тебя будит не фантазия. Тебя будит расхождение между его образом и его реальным поведением."
-      },
-      {
-        id: "line-4",
-        speakerCardId: "highPriestess",
-        focusCardId: "highPriestess",
-        tone: "тёмная-нежность",
-        text: "Интуиция уже поняла: он не так прозрачен, как тебе хотелось бы. Что-то важное он прячет даже от самого себя."
-      },
-      {
-        id: "line-5",
-        speakerCardId: "star",
-        focusCardId: "star",
-        tone: "тёмная-нежность",
-        text: "При этом ты видишь в нём свет не случайно. Там действительно есть мягкость и возможность, иначе я бы не сияла рядом."
-      },
-      {
-        id: "line-6",
-        speakerCardId: "nineOfSwords",
-        focusCardId: "nineOfSwords",
-        tone: "тёмная-нежность",
-        text: "Но возможность и надёжность — не одно и то же. Именно это ты и не хочешь произносить вслух."
-      },
-      {
-        id: "line-7",
-        speakerCardId: "highPriestess",
-        focusCardId: "highPriestess",
-        tone: "тёмная-нежность",
-        text: "Ты уже знаешь, где в этой истории придётся перестать угадывать и начать спрашивать прямо."
-      },
-      {
-        id: "line-8",
-        speakerCardId: "star",
-        focusCardId: "star",
-        tone: "тёмная-нежность",
-        text: "Надежду не нужно убивать. Ей нужно дать форму, в которой она сможет выдержать проверку реальностью."
-      },
-      {
-        id: "line-9",
-        speakerCardId: "nineOfSwords",
-        focusCardId: "nineOfSwords",
-        tone: "тёмная-нежность",
-        text: "А до тех пор твоя бессонница будет говорить за тебя. Она уже говорит."
-      }
+      d("highPriestess", "Ты уже всё чувствуешь раньше слов и давно собрала важные детали в одно знание."),
+      d("nineOfSwords", "Твой урок здесь не путать интуицию с тревогой: тревожит именно несоответствие между словами и делами."),
+      d("star", "Направление не в том, чтобы убить надежду, а в том, чтобы дать ей проверку реальностью."),
+      d("highPriestess", "Ты знаешь, где пора перестать угадывать и начать спрашивать прямо."),
+      d("star", "И знаешь, что ясность не разрушит верное, а только отсечёт слабое.")
     ],
     interpreterSummary:
-      "Твоя интуиция уловила не пустоту, а несоответствие между потенциалом мужчины и его фактической надёжностью. Ты видишь в нём свет, но уже понимаешь, что одних обещающих ощущений недостаточно, чтобы считать связь безопасной."
+      "Твоя интуиция уже увидела разницу между потенциалом и надёжностью. Надежду здесь не нужно душить, но ей пора перестать жить без фактов."
+  },
+  {
+    id: "spread-read-no-reply",
+    slug: "reads-and-does-not-reply",
+    question: "Почему он читает и не отвечает?",
+    tags: ["Все", "Коммуникация"],
+    introNote: "Здесь главный вопрос не в прочтении сообщения. Главный вопрос в том, зачем ему держать дистанцию именно так.",
+    cardIds: ["pageOfSwords", "fourOfSwords", "queenOfSwords"],
+    dialogue: [
+      d("pageOfSwords", "Он не выпал из контакта. Он следит и держит нить у себя в руках."),
+      d("fourOfSwords", "Ключ в том, что молчание сейчас для него удобнее разговора и честного обозначения позиции."),
+      d("queenOfSwords", "Это не повод рассыпаться в новых пояснениях. Здесь нужна твоя ясная экономия слов."),
+      d("pageOfSwords", "Он проверяет, останешься ли ты доступной без его вложения."),
+      d("queenOfSwords", "Первый шаг с твоей стороны не добирать внимание, а вернуть цену своему присутствию.")
+    ],
+    interpreterSummary:
+      "Он не потерял сообщение, а оставил контакт в подвешенном состоянии, выгодном ему. Ответ здесь не в том, чтобы писать больше, а в том, чтобы перестать подменять чужую позицию собственным старанием."
+  },
+  {
+    id: "spread-write-first-after-pause",
+    slug: "write-first-after-pause",
+    question: "Стоит ли писать первой после паузы?",
+    tags: ["Все", "Коммуникация"],
+    introNote: "Карты здесь не делят шаги на женские и мужские. Они смотрят, даёт ли твой ход ясность или только снимает напряжение с него.",
+    cardIds: ["hangedMan", "aceOfSwords", "twoOfWands"],
+    dialogue: [
+      d("hangedMan", "Сейчас всё висит не потому, что ответа нет, а потому что его никто не назвал вслух."),
+      d("aceOfSwords", "Мостом может стать одно короткое и честное сообщение без намёков и погони."),
+      d("twoOfWands", "После него станет видно, есть ли у этой связи горизонт или только привычная пауза."),
+      d("aceOfSwords", "Если писать, то не чтобы оживить его интерес, а чтобы вернуть себе ясность."),
+      d("twoOfWands", "И тогда любой результат будет шагом вперёд, а не ещё одной зависшей неделей.")
+    ],
+    interpreterSummary:
+      "Написать первой можно, но только как взрослый жест к ясности. Если сообщение превращается для тебя в попытку снова завести его мотор, лучше оставить паузу на его стороне."
+  },
+  {
+    id: "spread-flirt-or-politeness",
+    slug: "flirt-or-politeness-in-chat",
+    question: "Это флирт или вежливость в переписке?",
+    tags: ["Все", "Коммуникация"],
+    cardIds: ["knightOfCups", "pageOfPentacles", "sevenOfCups"],
+    dialogue: [
+      d("knightOfCups", "Очарование в переписке есть. Он не пишет так всем подряд и без вкуса."),
+      d("pageOfPentacles", "Ключ не в тоне, а в конкретике: предлагает ли он что-то реальное, кроме настроения."),
+      d("sevenOfCups", "Если всё держится на красивых словах без шага, это останется приятным туманом."),
+      d("pageOfPentacles", "Флирт становится намерением только там, где появляется маленькое, но настоящее действие."),
+      d("sevenOfCups", "Твой шаг здесь не угадывать оттенок фраз, а смотреть, превращаются ли они во встречу.")
+    ],
+    interpreterSummary:
+      "Флирт в этих сообщениях есть, но сам по себе он ещё ничего не гарантирует. Отделяй мягкость подачи от готовности переводить интерес в действие."
+  },
+  {
+    id: "spread-honest-conversation-now",
+    slug: "honest-conversation-now",
+    question: "Что даст честный разговор сейчас?",
+    tags: ["Все", "Коммуникация"],
+    cardIds: ["justice", "aceOfSwords", "sixOfSwords"],
+    dialogue: [
+      d("justice", "Сейчас связь устала от недосказанности сильнее, чем от самой правды."),
+      d("aceOfSwords", "Перелом даст разговор без кружения вокруг темы и без мягких половинчатых формулировок."),
+      d("sixOfSwords", "После него вы либо перейдёте на более взрослую воду, либо честно увидите, что плыть некуда."),
+      d("aceOfSwords", "Разговор не нужен, чтобы победить. Он нужен, чтобы перестать жить догадками."),
+      d("sixOfSwords", "И в этом его польза: он сдвигает историю с мели, даже если сдвиг ведёт в разные стороны.")
+    ],
+    interpreterSummary:
+      "Честный разговор сейчас даст не романтическую развязку, а навигацию. Он или укрепит мост между вами, или освободит тебя от лишнего тумана."
+  },
+  {
+    id: "spread-anxiety-or-red-flag",
+    slug: "anxiety-or-red-flag",
+    question: "Это тревога или уже красный флаг?",
+    tags: ["Все", "Границы"],
+    introNote: "Здесь важно не чувство само по себе, а то, что случится, если ты попросишь ясность и норму.",
+    cardIds: ["moon", "queenOfSwords", "tower"],
+    dialogue: [
+      d("moon", "Сейчас тебе правда тревожно, но тревога здесь рождается не на пустом месте."),
+      d("queenOfSwords", "Ключ прост: попробуй назвать свою границу без извинений и лишней мягкой упаковки."),
+      d("tower", "Если от одной ясной границы всё рушится, значит, трещина уже была в самой конструкции."),
+      d("queenOfSwords", "Красный флаг проявляется не раньше вопроса, а в реакции на него."),
+      d("tower", "Твой шаг не терпеть неопределённость как цену за контакт, а проверить связь на прочность.")
+    ],
+    interpreterSummary:
+      "Не каждая тревога — знак беды, но здесь она просит проверки, а не самоуспокоения. Если связь не выдерживает нормальной прямоты, это и есть важный ответ."
+  },
+  {
+    id: "spread-testing-boundaries-or-immature",
+    slug: "testing-boundaries-or-immature",
+    question: "Он проверяет границы или сам не зрел?",
+    tags: ["Все", "Границы"],
+    cardIds: ["knightOfWands", "emperor", "sevenOfWands"],
+    dialogue: [
+      d("knightOfWands", "Ему нравится брать контакт импульсом, когда хочется, и не думать о последствиях."),
+      d("emperor", "Ключ в том, что взрослой структуры здесь пока мало: он не держит форму стабильно."),
+      d("sevenOfWands", "Поэтому тебе важно не угадывать мотив, а защищать свою линию одинаково в любом случае."),
+      d("knightOfWands", "Даже если он не играет специально, хаотичность всё равно бьёт по тебе как проверка."),
+      d("sevenOfWands", "Первый шаг не воспитание его зрелости, а твоя последовательность в границах.")
+    ],
+    interpreterSummary:
+      "Здесь больше незрелости, чем тонкой стратегии, но для твоей нервной системы разница невелика. Смотреть нужно не на намерение, а на то, выдерживает ли он твои условия общения."
+  },
+  {
+    id: "spread-doubting-myself-near-him",
+    slug: "doubting-myself-near-him",
+    question: "Почему рядом с ним я начинаю сомневаться в себе?",
+    tags: ["Все", "Границы"],
+    cardIds: ["queenOfCups", "sevenOfSwords", "strength"],
+    dialogue: [
+      d("queenOfCups", "Ты входишь в эту историю мягко и с настоящей включённостью."),
+      d("sevenOfSwords", "Но рядом мало прямоты, и ты начинаешь компенсировать это самонаблюдением и догадками."),
+      d("strength", "Твоя задача не стать ещё удобнее, а выдержать себя без попытки заслужить ясность."),
+      d("sevenOfSwords", "Когда в связи не хватает прозрачности, человек часто начинает подозревать дефект в себе."),
+      d("strength", "Первый шаг — вернуть телу и голосу право не уговаривать, а называть, что тебе не подходит.")
+    ],
+    interpreterSummary:
+      "Сомнение в себе здесь не твоя природа, а реакция на скользкий контекст. Чем меньше в связи прямоты, тем важнее тебе держать собственную опору, а не дорабатывать чужую недосказанность."
+  },
+  {
+    id: "spread-all-on-my-initiative",
+    slug: "all-on-my-initiative",
+    question: "Стоит ли продолжать, если всё держится на моей инициативе?",
+    tags: ["Все", "Границы"],
+    cardIds: ["tenOfWands", "justice", "death"],
+    dialogue: [
+      d("tenOfWands", "Сейчас эта связь едет в основном на твоих руках, и ты уже платишь за это усталостью."),
+      d("justice", "Перелом наступает там, где ты честно называешь дисбаланс и перестаёшь прятать его под терпением."),
+      d("death", "После этого история либо меняет форму, либо заканчивает ту конфигурацию, в которой жила до сих пор."),
+      d("justice", "Продолжать автоматически — значит выдавать его отсутствие вклада за сложный период."),
+      d("death", "Твой выход не тащить двоих в одну сторону, а дать умереть перекосу, если он не исправляется.")
+    ],
+    interpreterSummary:
+      "Продолжать стоит только если инициатива перестанет быть односторонней реальностью, а не красивым обещанием. Иначе ты продлеваешь не связь, а собственную нагрузку."
+  },
+  {
+    id: "spread-what-is-ending-now",
+    slug: "what-is-ending-now",
+    question: "Что завершается в моей личной жизни прямо сейчас?",
+    tags: ["Все", "Переход"],
+    cardIds: ["fiveOfCups", "death", "world"],
+    dialogue: [
+      d("fiveOfCups", "Сейчас завершается не только человек или связь, но и старая скорбная оптика, через которую ты на них смотрела."),
+      d("death", "Мост здесь жёсткий: прежняя форма уже не оживёт в том виде, в каком тебе хотелось."),
+      d("world", "После этого приходит не пустота, а целость, в которой прошлое перестаёт диктовать масштаб будущего."),
+      d("death", "Переход начался не вчера. Ты просто только сейчас готова признать его необратимость."),
+      d("world", "И это хорошо: завершение здесь освобождает место, а не обнуляет тебя.")
+    ],
+    interpreterSummary:
+      "Завершается старый эмоциональный цикл, где боль всё ещё управляла выбором. Этот конец нужен не для наказания, а чтобы вернуть тебе ощущение целого маршрута дальше."
+  },
+  {
+    id: "spread-breakup-leads-where",
+    slug: "where-breakup-leads",
+    question: "Куда меня ведёт этот разрыв на самом деле?",
+    tags: ["Все", "Переход"],
+    cardIds: ["tower", "star", "chariot"],
+    dialogue: [
+      d("tower", "Разрыв выбил из тебя не только человека, но и старую конструкцию ожиданий."),
+      d("star", "Перелом в том, что под обломками уже проступает более честная линия надежды."),
+      d("chariot", "Выход ведёт не в немедленную новую любовь, а в возвращение себе направления и руля."),
+      d("star", "Это не история про цинизм после боли. Это история про очищенную надежду."),
+      d("chariot", "Твой шаг сейчас — ехать вперёд не назло прошлому, а из ясного внутреннего курса.")
+    ],
+    interpreterSummary:
+      "Этот разрыв ведёт тебя к более трезвой форме надежды и к возвращению контроля над собственной дорогой. Боль здесь ломает ложное, чтобы ты перестала ездить по кругу."
+  },
+  {
+    id: "spread-what-begins-if-i-let-go",
+    slug: "what-begins-if-i-let-go",
+    question: "Что начинается, если я перестану держаться за старый сюжет?",
+    tags: ["Все", "Переход"],
+    cardIds: ["hangedMan", "fool", "sun"],
+    dialogue: [
+      d("hangedMan", "Сейчас многое удерживается не любовью, а привычкой смотреть на одну и ту же историю из прежней точки."),
+      d("fool", "Мост начинается там, где ты разрешаешь себе шаг без гарантии и без старой драматической рамки."),
+      d("sun", "После этого приходит не хаос, а гораздо больше жизни, простоты и прямого света."),
+      d("fool", "Отпустить старый сюжет не значит обесценить прожитое."),
+      d("sun", "Это значит перестать отдавать вчерашнему праву закрывать тебе завтрашнее.")
+    ],
+    interpreterSummary:
+      "Если ты отпускаешь старый сюжет, начинается не пустота, а возвращение живости. Этот переход просит от тебя не жертвы, а смелости на новый воздух."
+  },
+  {
+    id: "spread-relationship-or-warmth",
+    slug: "relationship-or-warmth-nearby",
+    question: "Он хочет отношений или просто тепла рядом?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["knightOfWands", "kingOfCups", "fourOfWands"],
+    dialogue: [
+      d("knightOfWands", "Тепло и тяга здесь есть, и они живые, а не придуманные."),
+      d("kingOfCups", "Ключ в том, что у него есть эмоциональная глубина, но он пока держит её под контролем."),
+      d("fourOfWands", "До отношений эта энергия дойдёт только если он переведёт чувство в устойчивую форму."),
+      d("kingOfCups", "Сейчас он скорее хочет тебя рядом и ещё проверяет, выдержит ли связь большее."),
+      d("fourOfWands", "Твой ориентир не в том, что он чувствует, а в том, строит ли он пространство для продолжения.")
+    ],
+    interpreterSummary:
+      "Он не сводится к одной жажде тепла, но и до ясной структуры отношений ещё не дошёл. Намерение есть, а вот оформленность ему ещё предстоит доказать."
+  },
+  {
+    id: "spread-interest-me-or-process",
+    slug: "interest-in-me-or-process",
+    question: "Что в нём сильнее: интерес ко мне или интерес к процессу?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["pageOfWands", "sevenOfCups", "kingOfPentacles"],
+    dialogue: [
+      d("pageOfWands", "Его правда заводит сам азарт начала и ощущение движения."),
+      d("sevenOfCups", "Ключ в том, что он легко увлекается возможностями и образами, а не только человеком напротив."),
+      d("kingOfPentacles", "Проверка проста: становится ли он надёжнее по мере сближения или остаётся на уровне искры."),
+      d("pageOfWands", "Интерес к тебе есть, но процесс охоты и новизны пока подмешан слишком сильно."),
+      d("kingOfPentacles", "Смотри, умеет ли он оставаться после первого огня. Там и проявится ответ.")
+    ],
+    interpreterSummary:
+      "Сейчас в нём заметно смешаны два мотора: интерес к тебе и вкус к самому процессу сближения. Решать будет не яркость начала, а то, переходит ли он в устойчивое поведение."
+  },
+  {
+    id: "spread-return-with-offer",
+    slug: "return-with-concrete-offer",
+    question: "Вернётся ли он с конкретным предложением?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["judgement", "knightOfPentacles", "threeOfWands"],
+    dialogue: [
+      d("judgement", "Импульс вернуться здесь есть, и он уже созревает до уровня действия."),
+      d("knightOfPentacles", "Ключ в форме: если шаг случится, он будет не красивым, а конкретным и спокойным."),
+      d("threeOfWands", "Дальше всё зависит от того, умеет ли он мыслить не только моментом, но и перспективой."),
+      d("knightOfPentacles", "Это не похоже на внезапный ночной всплеск без продолжения."),
+      d("threeOfWands", "Смотри на предложение, в котором есть время, место и следующий шаг, а не только тоска.")
+    ],
+    interpreterSummary:
+      "Вернуться с конкретикой он может, и если сделает это, шаг будет достаточно приземлённым. Главная проверка не в самом возвращении, а в наличии у него горизонта дальше первой встречи."
+  },
+  {
+    id: "spread-thinks-between-messages",
+    slug: "thinks-between-messages",
+    question: "Думает ли он обо мне между сообщениями?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["pageOfSwords", "sixOfCups", "fourOfCups"],
+    dialogue: [
+      d("pageOfSwords", "Да, мысль о тебе остаётся у него между касаниями контакта."),
+      d("sixOfCups", "Ключ не только в памяти, но и в эмоциональном послевкусии, которое ты в нём оставила."),
+      d("fourOfCups", "Проблема в том, что думать и действовать для него сейчас не одно и то же."),
+      d("sixOfCups", "Ты всплываешь у него не случайно и не как пустой фон."),
+      d("fourOfCups", "Но не путай внутреннее возвращение к тебе с готовностью что-то менять снаружи.")
+    ],
+    interpreterSummary:
+      "Да, он думает о тебе между сообщениями. Но этот внутренний контакт пока слабее, чем нужен для устойчивого внешнего шага."
+  },
+  {
+    id: "spread-feelings-after-last-meeting",
+    slug: "feelings-after-last-meeting",
+    question: "Что он чувствует после нашей последней встречи?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["queenOfWands", "moon", "kingOfCups"],
+    dialogue: [
+      d("queenOfWands", "После встречи в нём осталось яркое и телесное ощущение тебя."),
+      d("moon", "Но рядом с этим поднялась и внутренняя неясность: что делать с силой впечатления дальше."),
+      d("kingOfCups", "Глубже всего там не холод, а сдержанное чувство, которое он пока не выносит на поверхность."),
+      d("moon", "Он не до конца доверяет собственной уязвимости и потому может выглядеть тише, чем чувствует."),
+      d("kingOfCups", "Смотри не на мгновенную открытость, а на то, сможет ли он удержать эмоциональную глубину без отката назад.")
+    ],
+    interpreterSummary:
+      "После встречи ты осталась в нём ярко, но не просто как искра. Чувство есть, а вот ясности, как с ним обходиться, у него пока меньше, чем хотелось бы."
+  },
+  {
+    id: "spread-depth-or-ego-proof",
+    slug: "depth-or-ego-proof",
+    question: "Ищет ли он глубину или только подтверждение своей силы?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["emperor", "devil", "twoOfCups"],
+    dialogue: [
+      d("emperor", "Ему важно чувствовать себя сильным и держащим ситуацию."),
+      d("devil", "Ключ в том, что желание подтверждения здесь правда подмешано к влечению."),
+      d("twoOfCups", "Но полностью свести его к игре в власть нельзя: здесь есть и настоящий зов к взаимности."),
+      d("devil", "Проблема начнётся там, где он выберет питание эго вместо живого обмена."),
+      d("twoOfCups", "Ответ проявится в одном: умеет ли он слушать тебя так же глубоко, как хочет быть подтверждённым сам.")
+    ],
+    interpreterSummary:
+      "В нём есть оба слоя: и жажда подтверждения, и потенциал глубины. Вопрос не в чистоте мотива, а в том, что он начнёт кормить первым, когда связь потребует равенства."
+  },
+  {
+    id: "spread-real-plan-for-closeness",
+    slug: "real-plan-for-closeness",
+    question: "Есть ли у него реальный план на сближение?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["threeOfWands", "knightOfPentacles", "aceOfCups"],
+    dialogue: [
+      d("threeOfWands", "Он уже смотрит на ситуацию не только из точки сегодняшнего удовольствия."),
+      d("knightOfPentacles", "Ключ в том, что его план, если он есть, будет медленным, но материальным."),
+      d("aceOfCups", "Это может привести к настоящему открытию сердца, если темп не будет сорван нетерпением."),
+      d("knightOfPentacles", "Здесь не пахнет хаотичным рывком. Скорее поступательностью без лишней афиши."),
+      d("aceOfCups", "Смотри, появляется ли у его интереса ритуал и повторяемость. Там и рождается реальный план.")
+    ],
+    interpreterSummary:
+      "Да, у него есть зачаток плана на сближение, но он не быстрый и не театральный. Если эта линия настоящая, она проявится через устойчивые маленькие шаги."
+  },
+  {
+    id: "spread-main-risk-in-connection",
+    slug: "main-risk-in-connection",
+    question: "Что он считает главным риском в этой связи?",
+    tags: ["Все", "Намерения"],
+    cardIds: ["fiveOfWands", "tenOfCups", "tower"],
+    dialogue: [
+      d("fiveOfWands", "Он чувствует, что эта связь способна расшатать его внутренний порядок и привычные защиты."),
+      d("tenOfCups", "Ключ в том, что за этим стоит страх реальной эмоциональной полноты, а не просто мелкий дискомфорт."),
+      d("tower", "Главный риск для него — что придётся сломать что-то старое в себе и в способе жить."),
+      d("fiveOfWands", "Поэтому он может спорить, метаться или создавать мелкое напряжение вместо прямого признания страха."),
+      d("tower", "Если он правда пойдёт глубже, ему придётся разрушить не связь, а свою старую конструкцию контроля.")
+    ],
+    interpreterSummary:
+      "Главным риском он ощущает не тебя, а масштаб перемен, которые может вызвать эта близость. Его пугает не чувство само по себе, а цена внутреннего сдвига."
+  },
+  {
+    id: "spread-silence-temporary-or-leaving",
+    slug: "silence-temporary-or-leaving",
+    question: "Эта тишина временная или это уже уход?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["fourOfSwords", "fiveOfPentacles", "temperance"],
+    dialogue: [
+      d("fourOfSwords", "Сейчас пауза реальна и она не случайна. Он действительно отступил."),
+      d("fiveOfPentacles", "Перелом в том, чувствует ли он себя слишком бедным на ресурс, чтобы входить в контакт как следует."),
+      d("temperance", "Выход пока не выглядит окончательным уходом, но требует времени и другого темпа."),
+      d("fiveOfPentacles", "Он молчит из дефицита, а не из полноценного закрытия двери."),
+      d("temperance", "Если связь и оживёт, то не резким прыжком, а через осторожное возвращение баланса.")
+    ],
+    interpreterSummary:
+      "Пока это больше похоже на временное отступление из внутреннего дефицита, чем на холодный окончательный уход. Но пауза имеет смысл только если после неё он сможет вернуться в более живом виде."
+  },
+  {
+    id: "spread-what-happens-inside-pause",
+    slug: "what-happens-inside-pause",
+    question: "Что происходит у него внутри во время паузы?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["hermit", "fourOfSwords", "kingOfCups"],
+    dialogue: [
+      d("hermit", "Внутри он сейчас больше слушает себя, чем связь, и это делает его внешне далёким."),
+      d("fourOfSwords", "Ключ в остановке: он как будто лёг на дно, чтобы не принимать решение в перегрузе."),
+      d("kingOfCups", "Но чувство не выключилось. Оно просто удерживается глубже, чем видно снаружи."),
+      d("hermit", "Его тишина сейчас похожа на внутреннее переваривание, а не на торжественный разрыв."),
+      d("kingOfCups", "Вопрос в том, выйдет ли он потом с ясностью или останется жить в удобной внутренней тени.")
+    ],
+    interpreterSummary:
+      "Во время паузы в нём идёт не пустота, а закрытая внутренняя работа. Проблема не в отсутствии чувства, а в том, превратится ли это молчаливое переживание в действие."
+  },
+  {
+    id: "spread-cold-after-closeness",
+    slug: "cold-after-closeness",
+    question: "Почему после близости он становится холоднее?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["twoOfCups", "fourOfSwords", "kingOfSwords"],
+    dialogue: [
+      d("twoOfCups", "Сама близость его задевает по-настоящему, и в моменте он в ней есть."),
+      d("fourOfSwords", "Потом включается откат: ему нужно замереть, чтобы снова почувствовать контроль."),
+      d("kingOfSwords", "Снаружи это выглядит как холод, но глубже это попытка отрегулировать себя разумом."),
+      d("fourOfSwords", "Он не умеет пока оставаться тёплым без паузы после эмоционального сближения."),
+      d("kingOfSwords", "Тебе важно не путать его саморегуляцию с нормой для отношений, если она делает тебе больно.")
+    ],
+    interpreterSummary:
+      "После близости он не пустеет, а откатывается в контроль. Для тебя главный вопрос не почему он так устроен, а готов ли он взрослеть настолько, чтобы не делать этот цикл вашей постоянной погодой."
+  },
+  {
+    id: "spread-fear-or-lost-interest",
+    slug: "fear-or-lost-interest",
+    question: "Он отдалился из-за страха или из-за потери интереса?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["moon", "fiveOfCups", "hermit"],
+    dialogue: [
+      d("moon", "Отдаление здесь пахнет внутренней неясностью и страхом сильнее, чем ровной потерей интереса."),
+      d("fiveOfCups", "Ключ в переживании утраты или возможной боли: он заранее уходит в грусть и разочарование."),
+      d("hermit", "Потому и выбирает дистанцию вместо живого разговора."),
+      d("fiveOfCups", "Если бы интерес просто умер, здесь было бы гораздо меньше эмоциональной тяжести."),
+      d("hermit", "Но страх тоже не оправдание: тебе важен не диагноз, а его способность выйти из него навстречу.")
+    ],
+    interpreterSummary:
+      "Сейчас это больше похоже на страх и внутреннюю печаль, чем на чистую потерю интереса. Но результат для тебя меняется только тогда, когда он начнёт действовать иначе, а не просто переживать внутри."
+  },
+  {
+    id: "spread-if-i-stop-contact",
+    slug: "if-i-stop-contact",
+    question: "Что будет, если я перестану поддерживать контакт?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["hangedMan", "queenOfSwords", "eightOfCups"],
+    dialogue: [
+      d("hangedMan", "Если ты перестанешь держать нить, зависшая конструкция больше не сможет притворяться движением."),
+      d("queenOfSwords", "Ключ здесь в ясности: ты увидишь реальную силу его мотива без своей подпорки."),
+      d("eightOfCups", "Дальше история либо сама пойдёт за тобой, либо покажет, что уже ушла раньше."),
+      d("queenOfSwords", "Твой шаг не наказание ему, а прекращение односторонней работы."),
+      d("eightOfCups", "И это полезно, потому что даёт конец иллюзии, если связь жива только на твоём усилии.")
+    ],
+    interpreterSummary:
+      "Если ты перестанешь поддерживать контакт, правда выйдет на поверхность быстрее. Либо он начнёт двигаться сам, либо откроется пустота, которую ты до этого прикрывала своей инициативой."
+  },
+  {
+    id: "spread-why-it-restarts-and-stops",
+    slug: "why-it-restarts-and-stops",
+    question: "Почему связь то оживает, то снова замирает?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["temperance", "wheelOfFortune", "fourOfCups"],
+    dialogue: [
+      d("wheelOfFortune", "Здесь есть цикличность: связь действительно крутится по одному и тому же кругу."),
+      d("fourOfCups", "Ключ в том, что после оживления снова приходит внутренний спад и эмоциональное отстранение."),
+      d("temperance", "Выход возможен только если кто-то один перестанет подливать жизнь в круг и начнёт выстраивать иной ритм."),
+      d("wheelOfFortune", "Случайностью это уже не назовёшь. Это узнаваемый паттерн."),
+      d("temperance", "Лечится он не ярким всплеском, а новым темпом и дозировкой контакта.")
+    ],
+    interpreterSummary:
+      "Связь замирает и оживает не из-за судьбы, а из-за повторяющегося внутреннего цикла. Чтобы выйти из него, нужен другой способ быть в контакте, а не ещё одна сильная искра."
+  },
+  {
+    id: "spread-pause-before-step-or-end",
+    slug: "pause-before-step-or-end",
+    question: "Это пауза перед шагом или пауза перед концом?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["twoOfWands", "judgement", "fourOfSwords"],
+    dialogue: [
+      d("twoOfWands", "Сейчас связь стоит на развилке, а не в окончательной точке."),
+      d("judgement", "Перелом ещё может случиться, если кто-то решится назвать правду и двинуться."),
+      d("fourOfSwords", "Но пока пауза остаётся паузой: движение ещё не перешло в действие."),
+      d("judgement", "Потенциал шага здесь есть, и он не выдуманный."),
+      d("fourOfSwords", "Ответ зависит от того, не превратится ли ожидание в вечную отсрочку под красивым названием.")
+    ],
+    interpreterSummary:
+      "Это ещё не финальная тишина, но и не обещанный шаг. Карты показывают развилку, где потенциал есть, а решение ещё не воплощено."
+  },
+  {
+    id: "spread-what-anxiety-exaggerates",
+    slug: "what-anxiety-exaggerates",
+    question: "Что моя тревога преувеличивает в этом молчании?",
+    tags: ["Все", "Пауза"],
+    cardIds: ["nineOfSwords", "moon", "sixOfSwords"],
+    dialogue: [
+      d("nineOfSwords", "Тревога делает молчание тотальным приговором и уже дорисовывает самый жёсткий сценарий."),
+      d("moon", "Ключ в том, что сейчас действительно много неясного, и из-за этого ум раздувает каждую тень."),
+      d("sixOfSwords", "Первый полезный шаг — выйти из внутреннего шторма в более спокойное, наблюдающее состояние."),
+      d("nineOfSwords", "Ты преувеличиваешь степень своей вины и окончательность происходящего."),
+      d("sixOfSwords", "Это не отменяет вопроса к нему, но возвращает тебе ровную голову для следующих решений.")
+    ],
+    interpreterSummary:
+      "Тревога здесь преувеличивает тотальность и личную катастрофу. Сначала нужно вернуть себе внутреннюю воду поспокойнее, а уже потом решать, что значит его молчание на деле."
+  },
+  {
+    id: "spread-what-his-return-means",
+    slug: "what-his-sudden-return-means",
+    question: "Что значит его внезапное возвращение?",
+    tags: ["Все", "Возвращение"],
+    cardIds: ["judgement", "pageOfCups", "sixOfCups"],
+    dialogue: [
+      d("judgement", "Его возвращение не случайно: внутри него снова поднялась эта история."),
+      d("pageOfCups", "Но форма пока мягкая и не до конца взрослая: он скорее прощупывает почву, чем несёт готовую конструкцию."),
+      d("sixOfCups", "Память и эмоциональное послевкусие здесь очень сильны."),
+      d("pageOfCups", "Возвращение значит, что связь не отпустила его до конца."),
+      d("judgement", "Но смысл его станет ясен только если за мягким касанием последует взрослое продолжение.")
+    ],
+    interpreterSummary:
+      "Его возвращение значит, что история в нём не закрылась. Пока это ещё не гарантия новой зрелой главы, а скорее эмоциональный подъём к повторному контакту."
+  },
+  {
+    id: "spread-return-from-feelings-or-loneliness",
+    slug: "return-from-feelings-or-loneliness",
+    question: "Он вернулся из чувств или из одиночества?",
+    tags: ["Все", "Возвращение"],
+    cardIds: ["sixOfCups", "fiveOfPentacles", "kingOfCups"],
+    dialogue: [
+      d("fiveOfPentacles", "Одиночество и внутренний холод тут действительно сыграли свою роль."),
+      d("sixOfCups", "Но вернулся он не к пустому удобству, а к конкретной эмоциональной памяти о тебе."),
+      d("kingOfCups", "Глубже всего здесь всё-таки чувство, просто к нему примешан дефицит."),
+      d("fiveOfPentacles", "Важно не романтизировать его нехватку как доказательство любви."),
+      d("kingOfCups", "Ответ расклада такой: чувства есть, но их сейчас несёт человек, которому самому внутренне не очень тепло.")
+    ],
+    interpreterSummary:
+      "Он вернулся не только из одиночества, хотя дефицит в нём тоже слышен. Чувство есть, но оно приходит вместе с его внутренней нехваткой, а значит требует особенно трезвой оценки."
+  },
+  {
+    id: "spread-open-door-after-silence",
+    slug: "open-door-after-silence",
+    question: "Стоит ли открывать дверь после его молчания?",
+    tags: ["Все", "Возвращение"],
+    cardIds: ["justice", "sixOfCups", "sevenOfWands"],
+    dialogue: [
+      d("sixOfCups", "Сердце легко откликается, потому что между вами осталось живое человеческое тепло."),
+      d("justice", "Но решение нужно принимать не памятью, а ясными условиями входа обратно."),
+      d("sevenOfWands", "Твоя граница здесь не жёсткость, а защита того, что уже дорого стоило."),
+      d("justice", "Открывать дверь можно только если вместе с ним входит и ответственность за прошлую тишину."),
+      d("sevenOfWands", "Без этого ты не принимаешь его назад, а сдаёшь свою позицию.")
+    ],
+    interpreterSummary:
+      "Дверь можно приоткрыть, но не настежь и не бесплатно. Возвращение должно проходить через объяснение, уважение к твоим границам и другой уровень присутствия."
+  },
+  {
+    id: "spread-second-round",
+    slug: "second-round-of-story",
+    question: "Что будет, если дать этой истории второй круг?",
+    tags: ["Все", "Возвращение"],
+    cardIds: ["wheelOfFortune", "judgement", "threeOfSwords"],
+    dialogue: [
+      d("wheelOfFortune", "Второй круг действительно может начаться: ситуация умеет снова заходить в движение."),
+      d("judgement", "Но перелом случится только через честное признание того, что было сломано в первый раз."),
+      d("threeOfSwords", "Если правду обойти, второй круг быстро упрётся в ту же рану."),
+      d("judgement", "Возвращение само по себе ещё не исцеление."),
+      d("threeOfSwords", "Твой шаг здесь не путать повторный контакт с новой историей без глубокого пересмотра.")
+    ],
+    interpreterSummary:
+      "Второй круг возможен, но без разреза по старой боли он станет лишь повтором знакомой раны. Новая попытка должна опираться на честный разбор, а не на силу притяжения."
+  },
+  {
+    id: "spread-changed-or-missed-access",
+    slug: "changed-or-missed-access",
+    question: "Он правда изменился или просто соскучился по доступу ко мне?",
+    tags: ["Все", "Возвращение"],
+    cardIds: ["devil", "sixOfCups", "death"],
+    dialogue: [
+      d("sixOfCups", "Он правда скучал по тому, что было между вами и как рядом с тобой чувствовал себя."),
+      d("devil", "Но к этому подмешан и голод по доступу, по привычной близости и своему прежнему влиянию."),
+      d("death", "Изменение доказывается только одним: умерла ли старая схема входа к тебе."),
+      d("devil", "Пока это нельзя назвать чистой зрелой трансформацией."),
+      d("death", "Смотри, что именно он приносит назад: новую форму связи или попытку вернуть старый допуск.")
+    ],
+    interpreterSummary:
+      "Пока в нём смешаны память, голод и возможный сдвиг. Ответ даст не его тон, а то, умерли ли старые модели доступа к тебе или он просто хочет восстановить привычный маршрут."
+  },
+  {
+    id: "spread-return-without-old-pain",
+    slug: "return-without-old-pain",
+    question: "Можно ли вернуться без повторения старой боли?",
+    tags: ["Все", "Возвращение"],
+    cardIds: ["temperance", "judgement", "sixOfSwords"],
+    dialogue: [
+      d("judgement", "Вернуться можно, но только если оба признают старый узел, а не обойдут его молча."),
+      d("temperance", "Мостом станет новый ритм: меньше драматических качелей, больше дозированной честности."),
+      d("sixOfSwords", "Тогда история сможет перейти в более спокойную воду, а не снова в шторм."),
+      d("temperance", "Старую боль нельзя просто забыть. Её нужно переварить по-новому."),
+      d("sixOfSwords", "Если переход будет реальным, он почувствуется прежде всего как уменьшение хаоса.")
+    ],
+    interpreterSummary:
+      "Да, вернуться без прежней боли можно, но только через новый темп и новый уровень разговора. Если хаос остаётся прежним, значит, старая рана никуда не делась."
+  },
+  {
+    id: "spread-wait-or-close-door",
+    slug: "wait-or-close-door",
+    question: "Ждать его или закрыть эту дверь?",
+    tags: ["Все", "Выбор"],
+    cardIds: ["twoOfWands", "queenOfSwords", "world"],
+    dialogue: [
+      d("twoOfWands", "Ты уже стоишь на развилке и чувствуешь, что дальше жить в подвешенности тяжело."),
+      d("queenOfSwords", "Ключ в том, чтобы выбрать не страх потери, а ясность своего положения."),
+      d("world", "Закрытая дверь здесь не поражение, а завершение цикла, если другой стороны по-настоящему нет."),
+      d("queenOfSwords", "Ждать стоит только то, у чего есть признаки движения, а не одна внутренняя надежда."),
+      d("world", "Иногда верность себе выглядит именно как закрывание двери, а не как верное ожидание.")
+    ],
+    interpreterSummary:
+      "Этот выбор не о гордости, а о фактах. Если движения с его стороны нет, закрытая дверь становится способом вернуть себе завершённость, а не наказать его."
+  },
+  {
+    id: "spread-one-more-date",
+    slug: "one-more-date",
+    question: "Стоит ли соглашаться на ещё одну встречу?",
+    tags: ["Все", "Выбор"],
+    cardIds: ["lovers", "pageOfCups", "justice"],
+    dialogue: [
+      d("lovers", "Тяга к ещё одной встрече здесь есть, и она не пустая."),
+      d("pageOfCups", "Но сам шаг сейчас ещё мягкий и немного наивный: чувства есть, формы мало."),
+      d("justice", "Поэтому соглашаться стоит только если встреча не отменяет для тебя вопрос ясности."),
+      d("pageOfCups", "Ещё одно свидание не обязано всё решить."),
+      d("justice", "Оно имеет смысл, если ты идёшь в него с открытыми глазами, а не как в замену разговору.")
+    ],
+    interpreterSummary:
+      "На встречу можно идти, если она для тебя способ увидеть реальность, а не продлить надежду любой ценой. Притяжение здесь есть, но ответственность за рамку остаётся у тебя."
+  },
+  {
+    id: "spread-honest-to-approach-or-step-back",
+    slug: "approach-or-step-back",
+    question: "Что для меня сейчас честнее: приблизиться или отступить?",
+    tags: ["Все", "Выбор"],
+    cardIds: ["chariot", "eightOfCups", "strength"],
+    dialogue: [
+      d("chariot", "Часть тебя хочет всё-таки взять курс на сближение и проверить шанс до конца."),
+      d("eightOfCups", "Но перелом в том, что отступление сейчас может быть не бегством, а формой зрелости."),
+      d("strength", "Честнее всего выбрать то, где ты не предаёшь себя ради удержания контакта."),
+      d("eightOfCups", "Иногда приблизиться хочется потому, что страшно не закрыть гештальт."),
+      d("strength", "Смотри, какое движение оставляет тебе больше достоинства и внутренней тишины.")
+    ],
+    interpreterSummary:
+      "Сейчас честность измеряется не романтической смелостью, а внутренним самоуважением. Если сближение требует от тебя снова идти против себя, отступление будет более зрелым шагом."
+  },
+  {
+    id: "spread-words-or-actions",
+    slug: "words-or-actions",
+    question: "Нужно ли прояснять всё словами или смотреть на действия?",
+    tags: ["Все", "Выбор"],
+    cardIds: ["aceOfSwords", "kingOfSwords", "pageOfSwords"],
+    dialogue: [
+      d("aceOfSwords", "Слова здесь нужны, потому что туман сам собой не прояснится."),
+      d("kingOfSwords", "Сила разговора только в том, чтобы настроить точную линзу на действия."),
+      d("pageOfSwords", "Иначе вы застрянете в бесконечном анализе, наблюдении и чтении между строк."),
+      d("kingOfSwords", "Прояснить словами стоит рамку, ожидания и факты."),
+      d("aceOfSwords", "А потом уже смотреть, выдерживает ли реальность то, что было произнесено.")
+    ],
+    interpreterSummary:
+      "Это не выбор или-или. Сначала нужны точные слова, которые обнуляют догадки, а затем внимательность к действиям, которые либо подтверждают разговор, либо разоблачают его."
+  },
+  {
+    id: "spread-hope-him-or-faith-self",
+    slug: "hope-him-or-faith-self",
+    question: "Что выбирать: надежду на него или верность себе?",
+    tags: ["Все", "Выбор"],
+    cardIds: ["star", "queenOfPentacles", "fiveOfCups"],
+    dialogue: [
+      d("star", "Надежда в тебе жива не случайно и не выглядит глупой сама по себе."),
+      d("queenOfPentacles", "Но ключ в том, умеет ли эта надежда оставлять тебе почву под ногами."),
+      d("fiveOfCups", "Если ради неё ты снова теряешь себя, она быстро превращается в источник новой боли."),
+      d("queenOfPentacles", "Верность себе не убивает надежду. Она не даёт ей питаться твоим истощением."),
+      d("star", "Выбирать стоит не между сердцем и собой, а между живой надеждой и самообманом.")
+    ],
+    interpreterSummary:
+      "Надежду можно оставить, если она не требует от тебя самоотмены. Как только вера в него начинает съедать твою опору, верность себе становится единственным честным выбором."
+  },
+  {
+    id: "spread-give-time-another-chance",
+    slug: "give-time-another-chance",
+    question: "Есть ли смысл давать времени ещё один шанс?",
+    tags: ["Все", "Выбор"],
+    cardIds: ["wheelOfFortune", "temperance", "sevenOfPentacles"],
+    dialogue: [
+      d("wheelOfFortune", "Время действительно способно что-то сдвинуть, но только если внутри цикла меняется качество движения."),
+      d("temperance", "Ключ в дозировке: не ждать в тревоге, а дать пространству стать честнее и спокойнее."),
+      d("sevenOfPentacles", "Смысл у времени есть, если ты потом смотришь на рост, а не на одно лишь ожидание."),
+      d("temperance", "Ещё один шанс времени не означает ещё один аванс без условий."),
+      d("sevenOfPentacles", "Проверяй не длительность, а плоды. Иначе ожидание становится просто затяжкой.")
+    ],
+    interpreterSummary:
+      "Времени можно дать шанс, если оно работает как среда для изменений, а не как отсрочка правды. Смысл есть там, где вместе с временем появляется рост, а не только новая неделя тишины."
+  },
+  {
+    id: "spread-which-decision-ripe",
+    slug: "which-decision-is-ripe",
+    question: "Какое решение уже назрело, а я его откладываю?",
+    tags: ["Все", "Выбор"],
+    cardIds: ["hangedMan", "justice", "aceOfPentacles"],
+    dialogue: [
+      d("hangedMan", "Ты уже слишком долго держишь ситуацию в подвешенном виде, будто этим откладываешь цену выбора."),
+      d("justice", "Назрело решение назвать вещи своими именами и определить, что для тебя теперь норма."),
+      d("aceOfPentacles", "После этого появится реальная новая почва, на которую можно встать."),
+      d("justice", "Ты откладываешь не ответ, а действие по этому ответу."),
+      d("aceOfPentacles", "Первый шаг очень земной: оформить решение в конкретное поведение, а не только внутреннее понимание.")
+    ],
+    interpreterSummary:
+      "Назрело решение вернуть своей ясности форму. Ты уже знаешь, что для тебя слишком мало, и осталось только перевести это знание в поступок."
+  },
+  {
+    id: "spread-what-clings-in-me",
+    slug: "what-clings-in-me",
+    question: "Что во мне на самом деле цепляется за эту историю?",
+    tags: ["Все", "Самоощущение"],
+    cardIds: ["devil", "eightOfSwords", "empress"],
+    dialogue: [
+      d("devil", "Цепляется не только сердце. Цепляется зависимость от сильного переживания и обещания развязки."),
+      d("eightOfSwords", "Ключ в том, что ты частично уже связала себя собственными мыслями о невозможности отпустить."),
+      d("empress", "Выход не в наказании себя за это, а в возвращении к собственной ценности и телесной полноте."),
+      d("eightOfSwords", "История держит тебя не потому, что она единственная, а потому что заняла слишком много внутреннего места."),
+      d("empress", "Вернуть себе жизнь шире этого сюжета — первый шаг к свободе от него.")
+    ],
+    interpreterSummary:
+      "Тебя держит не только мужчина, а сама сцепка желания, напряжения и незавершённости. Ослабить её можно не запретами, а возвращением к собственной наполненности вне этой истории."
+  },
+  {
+    id: "spread-why-no-clarity-man-holds-me",
+    slug: "why-he-holds-me-without-clarity",
+    question: "Почему меня так держит мужчина, который не даёт ясности?",
+    tags: ["Все", "Самоощущение"],
+    cardIds: ["nineOfSwords", "highPriestess", "queenOfPentacles"],
+    dialogue: [
+      d("nineOfSwords", "Тебя держит не только он, но и напряжение незакрытого вопроса."),
+      d("highPriestess", "Ключ в том, что часть ответа ты уже чувствуешь, но пока не хочешь окончательно принять."),
+      d("queenOfPentacles", "Вернуться к себе значит перестать жить внутри его недосказанности как в доме."),
+      d("highPriestess", "Неясность цепляет особенно сильно там, где у нас уже есть внутреннее знание."),
+      d("queenOfPentacles", "Тебе нужно не ещё одно толкование его, а больше опоры в своей повседневной реальности.")
+    ],
+    interpreterSummary:
+      "Тебя держит смесь неясности и уже существующего внутреннего знания, которое ты откладываешь признать. Чем больше ты возвращаешь себе почву, тем меньше чужая недоговорённость управляет твоим вниманием."
+  },
+  {
+    id: "spread-intuition-sees-before-mind",
+    slug: "intuition-sees-before-mind",
+    question: "Что моя интуиция видит раньше, чем разум признаёт?",
+    tags: ["Все", "Самоощущение"],
+    cardIds: ["highPriestess", "moon", "aceOfSwords"],
+    dialogue: [
+      d("highPriestess", "Интуиция уже считывает рисунок ситуации, ещё до того как ты его формулируешь."),
+      d("moon", "Разум сопротивляется потому, что картинка не до конца приятна и всё ещё покрыта туманом."),
+      d("aceOfSwords", "Следующий шаг — дать этому знанию прямую фразу и не смягчать её до неузнаваемости."),
+      d("moon", "Чаще всего ты опаздываешь не с чувством, а с признанием чувства."),
+      d("aceOfSwords", "Чем раньше ты назовёшь увиденное, тем меньше сил уйдёт на внутреннюю войну.")
+    ],
+    interpreterSummary:
+      "Интуиция уже видит общий рисунок раньше аргументов. Разуму сейчас важно не спорить с этим бесконечно, а дать внутреннему знанию точную форму."
+  },
+  {
+    id: "spread-love-or-hope",
+    slug: "love-or-hope",
+    question: "Где я путаю любовь с надеждой?",
+    tags: ["Все", "Самоощущение"],
+    cardIds: ["star", "sevenOfCups", "queenOfCups"],
+    dialogue: [
+      d("star", "Твоя надежда красива и по-своему чиста, поэтому легко маскируется под любовь."),
+      d("sevenOfCups", "Путаница возникает там, где образ будущего становится сильнее реального поведения человека."),
+      d("queenOfCups", "Любовь к себе просит не запрещать чувство, а отличать воду сердца от тумана фантазии."),
+      d("sevenOfCups", "Надежда становится ловушкой, когда ты любишь не связь, а её возможную лучшую версию."),
+      d("queenOfCups", "Твой шаг — оставаться нежной к себе и при этом смотреть на факты без украшений.")
+    ],
+    interpreterSummary:
+      "Ты путаешь любовь с надеждой там, где влюбляешься в потенциал сильнее, чем в реальность контакта. Развязка не в холодности, а в более точном различении между ними."
+  },
+  {
+    id: "spread-what-power-i-give-away",
+    slug: "what-power-i-give-away",
+    question: "Какую свою силу я отдаю этой связи?",
+    tags: ["Все", "Самоощущение"],
+    cardIds: ["strength", "sixOfPentacles", "queenOfWands"],
+    dialogue: [
+      d("strength", "Ты отдаёшь этой связи часть своей внутренней устойчивости и способности самой задавать тон жизни."),
+      d("sixOfPentacles", "Ключ в обмене: ты начинаешь мерить свою ценность тем, сколько получаешь обратно."),
+      d("queenOfWands", "Твоя сила возвращается, когда внимание снова идёт не только на него, но и на твоё собственное свечение."),
+      d("sixOfPentacles", "Чужая отдача важна, но она не должна становиться главным распределителем твоей энергии."),
+      d("queenOfWands", "Верни себе право быть яркой и полной без его подтверждения.")
+    ],
+    interpreterSummary:
+      "Этой связи ты отдаёшь право оценивать твою наполненность и желанность. Вернуть силу значит вынуть свою ценность из режима взаиморасчёта и снова поставить её в центр своей жизни."
+  },
+  {
+    id: "spread-what-return-to-self-first",
+    slug: "what-to-return-to-self-first",
+    question: "Что мне нужно вернуть себе, прежде чем смотреть на него?",
+    tags: ["Все", "Самоощущение"],
+    cardIds: ["kingOfSwords", "hermit", "nineOfPentacles"],
+    dialogue: [
+      d("hermit", "Сначала тебе нужно вернуться в своё внутреннее пространство без постоянной ориентировки на его сигналы."),
+      d("kingOfSwords", "Потом — к трезвой ясности, где вещи называются своими именами, без смягчающих иллюзий."),
+      d("nineOfPentacles", "И только из этого состояния приходит достойная независимость, а не отыгранная холодность."),
+      d("kingOfSwords", "Смотреть на него сейчас полезно не из голода, а из собранности."),
+      d("nineOfPentacles", "Верни себе вкус собственной жизни, чтобы его фигура перестала быть единственным центром притяжения.")
+    ],
+    interpreterSummary:
+      "Прежде чем снова смотреть на него, тебе нужно вернуть себе тишину, трезвость и ощущение собственной полноценности. Из этого места любые решения будут значительно чище."
   }
 ];
+
+export const spreads = validateSpreads(spreadSeeds.map(buildSpread));

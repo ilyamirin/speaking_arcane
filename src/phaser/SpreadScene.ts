@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { tarotImageManifest, type TarotCard } from "../content/spreads";
+import { tarotImageManifest, type TarotCard } from "../content/cards";
 
 const SCENE_WIDTH = 720;
 const SCENE_HEIGHT = 688;

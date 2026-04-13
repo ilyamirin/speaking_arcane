@@ -1,4 +1,4 @@
-# Speaking Arcanes
+# Speaking Arcane
 
 Mobile-first tarot microblog built with `TypeScript`, `Vite`, and `Phaser`.
 

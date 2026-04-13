@@ -431,126 +431,14 @@ input {
   border-top: 1px solid var(--line);
 }
 
-.footer-duet__card-block,
-.footer-duet__ash-block {
-  display: grid;
-  gap: 0.78rem;
-}
-
-.footer-duet__copy {
-  display: grid;
-  gap: 0.38rem;
-}
-
-.footer-duet__eyebrow,
-.footer-duet__secret-label,
 .footer-duet__meta {
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.footer-duet__eyebrow,
 .footer-duet__meta {
   color: var(--muted);
   font-size: 0.71rem;
-}
-
-.footer-duet__lede {
-  margin: 0;
-  max-width: 30rem;
-  color: var(--paper);
-  line-height: 1.6;
-}
-
-.footer-duet__card-shell {
-  position: relative;
-  display: grid;
-  gap: 0.75rem;
-  padding: 0.8rem;
-  border: 1px solid var(--line);
-  border-radius: 1.5rem;
-  background:
-    radial-gradient(circle at top, rgba(132, 82, 85, 0.14), transparent 48%),
-    linear-gradient(180deg, rgba(15, 13, 18, 0.94), rgba(8, 8, 11, 0.98));
-  box-shadow: var(--shadow);
-}
-
-.footer-duet__card-shell:focus-visible {
-  outline: 2px solid rgba(215, 188, 159, 0.92);
-  outline-offset: 0.16rem;
-}
-
-.footer-duet__card-stage {
-  width: 100%;
-  height: clamp(18rem, 72vw, 28rem);
-  overflow: hidden;
-  border-radius: 1.1rem;
-}
-
-.footer-duet__card-stage canvas {
-  display: block;
-  width: 100% !important;
-  height: 100% !important;
-}
-
-.footer-duet__secret {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transform: translateY(0.4rem);
-  transition:
-    opacity 220ms ease,
-    transform 220ms ease,
-    max-height 220ms ease;
-}
-
-.footer-duet__secret.is-visible {
-  max-height: 10rem;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.footer-duet__secret-label {
-  margin: 0 0 0.32rem;
-  color: var(--muted);
-  font-size: 0.68rem;
-}
-
-.footer-duet__secret-text {
-  margin: 0;
-  color: var(--paper);
-  line-height: 1.65;
-  font-family: "Instrument Serif", Georgia, serif;
-  font-size: clamp(1.05rem, 3.6vw, 1.42rem);
-}
-
-.footer-duet__button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  min-height: 2.45rem;
-  padding: 0.55rem 0.9rem;
-  border: 1px solid rgba(212, 196, 186, 0.16);
-  border-radius: 999px;
-  background: rgba(132, 82, 85, 0.18);
-  color: var(--paper);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 180ms ease,
-    border-color 180ms ease,
-    background-color 180ms ease;
-}
-
-.footer-duet__button:hover {
-  border-color: rgba(212, 196, 186, 0.28);
-  background: rgba(132, 82, 85, 0.24);
-}
-
-.footer-duet__button.is-visible {
-  opacity: 1;
-  pointer-events: auto;
 }
 
 .footer-duet__meta {
@@ -592,14 +480,6 @@ input {
 
   .footer-duet {
     gap: 1.4rem;
-  }
-
-  .footer-duet__card-shell {
-    padding: 1rem;
-  }
-
-  .footer-duet__card-stage {
-    height: clamp(22rem, 42vw, 31rem);
   }
 }
 
