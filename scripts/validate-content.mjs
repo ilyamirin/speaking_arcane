@@ -7,6 +7,19 @@ const spreadsPath = path.join(rootDir, "src/content/spreads.ts");
 
 const cardsSource = fs.readFileSync(cardsPath, "utf8");
 const spreadsSource = fs.readFileSync(spreadsPath, "utf8");
+const bannedPhrases = [
+  "Вселенная вед",
+  "карты всё решили",
+  "так должно было случиться",
+  "Выход здесь",
+  "внутренняя работа",
+  "переживание внутри"
+];
+const repeatedPhraseLimits = new Map([
+  ["Ключ в том", 2],
+  ["Первый шаг", 2],
+  ["Перелом", 2]
+]);
 
 const filterTags = extractStringArray(cardsSource, /export const filterTags = \[([\s\S]*?)\] as const;/);
 const cardEntries = [...cardsSource.matchAll(/\{\s*id:\s*"([^"]+)",\s*nameRu:\s*"[^"]+",\s*fileName:\s*"([^"]+)"/g)];
@@ -45,8 +58,15 @@ for (const block of spreadBlocks) {
   const slug = extractSingle(block, /slug:\s*"([^"]+)"/, `slug for ${id}`);
   const tags = extractStringArray(block, /tags:\s*\[([\s\S]*?)\]/);
   const triplet = extractStringArray(block, /cardIds:\s*\[([\s\S]*?)\]/);
+  const introNoteMatch = block.match(/introNote:\s*"([\s\S]*?)",\n\s*cardIds:/);
+  const introNote = introNoteMatch ? introNoteMatch[1] : null;
   const dialogueBody = extractBetween(block, "dialogue: [", "],\n    interpreterSummary:");
   const dialogueEntries = [...dialogueBody.matchAll(/d\("([^"]+)",\s*"[\s\S]*?"(?:,\s*"([^"]+)")?\)/g)];
+  const interpreterSummary = extractSingle(
+    block,
+    /interpreterSummary:\s*"([\s\S]*?)"\n\s*\}/,
+    `interpreter summary for ${id}`
+  );
 
   if (seenIds.has(id)) {
     throw new Error(`Duplicate spread id: ${id}`);
@@ -98,6 +118,14 @@ for (const block of spreadBlocks) {
     throw new Error(`Spread ${id} must contain 4-5 dialogue lines.`);
   }
 
+  if (introNote && introNote.length > 140) {
+    throw new Error(`Spread ${id} introNote is too long (${introNote.length} chars).`);
+  }
+
+  if (interpreterSummary.length > 240) {
+    throw new Error(`Spread ${id} interpreterSummary is too long (${interpreterSummary.length} chars).`);
+  }
+
   for (const entry of dialogueEntries) {
     const speaker = entry[1];
     const focus = entry[2] || speaker;
@@ -107,6 +135,19 @@ for (const block of spreadBlocks) {
     if (!tripletSet.has(focus)) {
       throw new Error(`Spread ${id} uses focus "${focus}" outside its triplet.`);
     }
+  }
+}
+
+for (const phrase of bannedPhrases) {
+  if (spreadsSource.includes(phrase)) {
+    throw new Error(`Forbidden editorial phrase found in spreads.ts: "${phrase}"`);
+  }
+}
+
+for (const [phrase, limit] of repeatedPhraseLimits.entries()) {
+  const count = countOccurrences(spreadsSource, phrase);
+  if (count > limit) {
+    throw new Error(`Phrase "${phrase}" appears ${count} times; limit is ${limit}.`);
   }
 }
 
@@ -191,4 +232,8 @@ function extractTopLevelObjects(source) {
   }
 
   return objects;
+}
+
+function countOccurrences(source, phrase) {
+  return source.split(phrase).length - 1;
 }

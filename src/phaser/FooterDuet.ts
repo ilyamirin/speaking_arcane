@@ -500,7 +500,7 @@ export function buildInteractiveFooter(reducedMotion = false): HTMLElement {
   board.innerHTML = `
     <div class="footer-duet__lead">
       <p class="footer-duet__prompt">Коснись трижды.</p>
-      <p class="footer-duet__hint">Планшетка ответит тихо и без спешки.</p>
+      <p class="footer-duet__hint">Доска ответит коротко и без тумана.</p>
     </div>
     <div
       class="footer-duet__stage-shell"
@@ -519,7 +519,7 @@ export function buildInteractiveFooter(reducedMotion = false): HTMLElement {
   meta.className = "footer-duet__meta footer-duet__meta--stacked";
   meta.innerHTML = `
     <p class="footer-duet__copyright">Ilya G Mirin 2026</p>
-    <p>Cards and UI sounds adapted from open sources. All readings and editorial content are AI generated.</p>
+    <p>Карты и звуки интерфейса взяты из открытых источников. Все тексты и расклады сгенерированы ИИ.</p>
   `;
 
   section.append(board, meta);
