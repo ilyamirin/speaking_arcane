@@ -510,6 +510,7 @@ export function buildInteractiveFooter(reducedMotion = false): HTMLElement {
       aria-label="Ведьмина доска. Коснись трижды, чтобы услышать короткий ответ."
     >
       <div class="footer-duet__stage" data-footer-board-stage></div>
+      <div class="footer-duet__hit-area" data-footer-board-hit-area aria-hidden="true"></div>
     </div>
     <p class="footer-duet__verdict" data-footer-board-verdict aria-live="polite"></p>
   `;
@@ -526,19 +527,42 @@ export function buildInteractiveFooter(reducedMotion = false): HTMLElement {
 
   const stageShellElement = board.querySelector<HTMLElement>("[data-footer-board-shell]");
   const stageElement = board.querySelector<HTMLElement>("[data-footer-board-stage]");
+  const hitAreaElement = board.querySelector<HTMLElement>("[data-footer-board-hit-area]");
   const verdictElement = board.querySelector<HTMLElement>("[data-footer-board-verdict]");
 
-  if (!stageShellElement || !stageElement || !verdictElement) {
+  if (!stageShellElement || !stageElement || !hitAreaElement || !verdictElement) {
     throw new Error("Footer board shell is incomplete.");
   }
 
   let runtime: FooterBoardRuntime | null = null;
+  let lastPointerActivation = 0;
 
   const activateBoard = (): void => {
     runtime?.activate();
   };
 
-  stageShellElement.addEventListener("click", activateBoard);
+  const activateFromPointer = (event: Event): void => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const now = Date.now();
+    if (now - lastPointerActivation < 220) {
+      return;
+    }
+
+    lastPointerActivation = now;
+    activateBoard();
+  };
+
+  hitAreaElement.addEventListener("pointerup", activateFromPointer);
+  hitAreaElement.addEventListener(
+    "touchend",
+    (event) => {
+      activateFromPointer(event);
+    },
+    { passive: false }
+  );
+  hitAreaElement.addEventListener("click", activateFromPointer);
   stageShellElement.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") {
       return;

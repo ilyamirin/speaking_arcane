@@ -598,6 +598,15 @@ input {
   height: 100%;
 }
 
+.footer-duet__hit-area {
+  position: absolute;
+  inset: 0.7rem;
+  z-index: 3;
+  border-radius: 1.2rem;
+  background: transparent;
+  touch-action: manipulation;
+}
+
 .footer-duet__verdict {
   min-height: 2.9rem;
   margin: 0;
@@ -671,6 +680,10 @@ input {
 
   .footer-duet__stage-shell {
     padding: 0.85rem;
+  }
+
+  .footer-duet__hit-area {
+    inset: 0.85rem;
   }
 }
 
