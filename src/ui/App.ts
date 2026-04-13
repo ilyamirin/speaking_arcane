@@ -1,5 +1,7 @@
 import { filterTags, spreads, type DialogueLine, type FilterTag, type SpreadPost } from "../content/spreads";
+import { buildInteractiveFooter } from "../phaser/FooterDuet";
 import { SpreadCanvas } from "../phaser/SpreadScene";
+import { interfaceAudio } from "./audio";
 
 interface RuntimeLine {
   id: string;
@@ -18,10 +20,18 @@ interface SpreadRuntime {
   bubbleSpeakerElement: HTMLElement;
   bubbleTextElement: HTMLElement;
   scrubberElement: HTMLInputElement;
-  hintElement: HTMLElement;
 }
 
 const runtimeById = new Map<string, SpreadRuntime>();
+
+const filterImageByTag: Record<FilterTag, { inactive: string; active: string }> = {
+  "Все": { inactive: "/filter-plaques/all.png", active: "/filter-plaques/all-active.png" },
+  "Намерения": { inactive: "/filter-plaques/intentions.png", active: "/filter-plaques/intentions-active.png" },
+  "Пауза": { inactive: "/filter-plaques/pause.png", active: "/filter-plaques/pause-active.png" },
+  "Возвращение": { inactive: "/filter-plaques/return.png", active: "/filter-plaques/return-active.png" },
+  "Выбор": { inactive: "/filter-plaques/choice.png", active: "/filter-plaques/choice-active.png" },
+  "Самоощущение": { inactive: "/filter-plaques/self.png", active: "/filter-plaques/self-active.png" }
+};
 
 export function renderApp(root: HTMLElement): void {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -32,10 +42,32 @@ export function renderApp(root: HTMLElement): void {
 
   const filterRow = root.querySelector<HTMLElement>("[data-filter-row]");
   const feed = root.querySelector<HTMLElement>("[data-feed]");
+  const footerRoot = root.querySelector<HTMLElement>("[data-footer-root]");
+  const filtersSection = root.querySelector<HTMLElement>(".filters");
 
-  if (!filterRow || !feed) {
+  if (!filterRow || !feed || !footerRoot || !filtersSection) {
     throw new Error("App shell is incomplete.");
   }
+
+  footerRoot.replaceChildren(buildInteractiveFooter(reducedMotion));
+
+  let lastScrollY = window.scrollY;
+  window.addEventListener(
+    "scroll",
+    () => {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY;
+
+      if (currentScrollY < 96 || delta < -6) {
+        filtersSection.classList.remove("filters--hidden");
+      } else if (delta > 6) {
+        filtersSection.classList.add("filters--hidden");
+      }
+
+      lastScrollY = currentScrollY;
+    },
+    { passive: true }
+  );
 
   const renderFeed = (): void => {
     runtimeById.forEach((runtime) => destroySpreadRuntime(runtime));
@@ -45,11 +77,20 @@ export function renderApp(root: HTMLElement): void {
 
     for (const tag of filterTags) {
       const button = document.createElement("button");
+      const isActive = tag === activeFilter;
+      const image = document.createElement("img");
       button.type = "button";
-      button.className = tag === activeFilter ? "filter-chip is-active" : "filter-chip";
-      button.textContent = tag;
-      button.setAttribute("aria-pressed", String(tag === activeFilter));
+      button.className = isActive ? "filter-chip is-active" : "filter-chip";
+      image.className = "filter-chip__image";
+      image.src = isActive ? filterImageByTag[tag].active : filterImageByTag[tag].inactive;
+      image.alt = "";
+      image.decoding = "async";
+      button.append(image);
+      button.setAttribute("aria-label", tag);
+      button.setAttribute("aria-pressed", String(isActive));
       button.addEventListener("click", () => {
+        interfaceAudio.unlock();
+        interfaceAudio.play("filter");
         activeFilter = tag;
         renderFeed();
       });
@@ -73,7 +114,12 @@ function buildShell(): HTMLElement {
     <main class="page">
       <section class="hero">
         <p class="hero__eyebrow">Speaking Arcanes</p>
-        <h1 class="hero__title">Три карты. Их спор. Мужской вывод, сказанный тихо.</h1>
+        <h1 class="hero__title">
+          <span class="hero__title-line">Три карты.</span>
+          <span class="hero__title-line">Их спор.</span>
+          <span class="hero__title-line">Мужской вывод,</span>
+          <span class="hero__title-line">сказанный тихо.</span>
+        </h1>
         <p class="hero__lede">
           Это мобильный нуарный блог о раскладах Таро Уэйта. Здесь расклад читается как короткая сцена:
           сначала смотри на карты, потом слушай их по одной реплике.
@@ -87,10 +133,7 @@ function buildShell(): HTMLElement {
         <div class="filters__inner" data-filter-row></div>
       </section>
       <section class="feed" data-feed></section>
-      <footer class="footer">
-        <p>Public domain Rider–Waite imagery adapted for the site atmosphere.</p>
-        <p>Ilya G Mirin 2026</p>
-      </footer>
+      <section data-footer-root></section>
     </main>
   `;
 
@@ -180,10 +223,7 @@ function buildSpreadSection(spread: SpreadPost, reducedMotion: boolean): HTMLEle
   scrubber.value = "0";
   scrubber.setAttribute("aria-label", `Таймлайн диалога расклада: ${spread.question}`);
 
-  const hint = document.createElement("p");
-  hint.className = "spread__hint";
-
-  dialoguePanel.append(bubble, scrubber, hint);
+  dialoguePanel.append(bubble, scrubber);
   section.append(header, stageShell, dialoguePanel);
 
   const canvas = new SpreadCanvas(stage, {
@@ -201,18 +241,19 @@ function buildSpreadSection(spread: SpreadPost, reducedMotion: boolean): HTMLEle
     bubbleElement: bubble,
     bubbleSpeakerElement: bubble.querySelector<HTMLElement>(".spread__bubble-speaker")!,
     bubbleTextElement: bubble.querySelector<HTMLElement>(".spread__bubble-text")!,
-    scrubberElement: scrubber,
-    hintElement: hint
+    scrubberElement: scrubber
   };
 
   runtimeById.set(spread.id, runtime);
   updateDialogueState(spread, runtime);
 
   backZone.addEventListener("click", () => {
+    interfaceAudio.unlock();
     moveByStep(spread, runtime, -1);
   });
 
   forwardZone.addEventListener("click", () => {
+    interfaceAudio.unlock();
     moveByStep(spread, runtime, 1);
   });
 
@@ -223,30 +264,34 @@ function buildSpreadSection(spread: SpreadPost, reducedMotion: boolean): HTMLEle
 
     if (event.key === "ArrowLeft") {
       event.preventDefault();
+      interfaceAudio.unlock();
       moveByStep(spread, runtime, -1);
       return;
     }
 
     if (event.key === "ArrowRight") {
       event.preventDefault();
+      interfaceAudio.unlock();
       moveByStep(spread, runtime, 1);
       return;
     }
 
     if (event.key === "Home") {
       event.preventDefault();
+      interfaceAudio.unlock();
       moveToIndex(spread, runtime, 0);
       return;
     }
 
     if (event.key === "End") {
       event.preventDefault();
+      interfaceAudio.unlock();
       moveToIndex(spread, runtime, runtime.lines.length - 1);
     }
   });
 
   scrubber.addEventListener("input", () => {
-    moveToIndex(spread, runtime, Number(scrubber.value));
+    moveToIndex(spread, runtime, Number(scrubber.value), false);
   });
 
   return section;
@@ -256,7 +301,8 @@ function moveByStep(spread: SpreadPost, runtime: SpreadRuntime, delta: number): 
   moveToIndex(spread, runtime, runtime.activeIndex + delta);
 }
 
-function moveToIndex(spread: SpreadPost, runtime: SpreadRuntime, index: number): void {
+function moveToIndex(spread: SpreadPost, runtime: SpreadRuntime, index: number, emitSound = true): void {
+  const previousIndex = runtime.activeIndex;
   const nextIndex = clamp(index, 0, runtime.lines.length - 1);
   if (nextIndex === runtime.activeIndex) {
     return;
@@ -264,21 +310,21 @@ function moveToIndex(spread: SpreadPost, runtime: SpreadRuntime, index: number):
 
   runtime.activeIndex = nextIndex;
   updateDialogueState(spread, runtime);
+
+  if (emitSound) {
+    playTransitionSound(runtime, previousIndex, nextIndex);
+  }
 }
 
 function updateDialogueState(spread: SpreadPost, runtime: SpreadRuntime): void {
   const activeLine = runtime.lines[runtime.activeIndex];
   const progress = runtime.lines.length > 1 ? (runtime.activeIndex / (runtime.lines.length - 1)) * 100 : 100;
 
-  runtime.stageShellElement.style.setProperty("--progress", `${progress}%`);
+  runtime.scrubberElement.style.setProperty("--progress", `${progress}%`);
   runtime.scrubberElement.value = String(runtime.activeIndex);
   runtime.bubbleSpeakerElement.textContent = activeLine.speakerName;
   runtime.bubbleTextElement.textContent = activeLine.text;
   runtime.bubbleElement.className = `spread__bubble spread__bubble--${activeLine.kind}`;
-  runtime.hintElement.textContent =
-    runtime.activeIndex === runtime.lines.length - 1
-      ? "Последняя реплика сказана. Слева можно вернуться назад, таймлайн тоже остаётся активным."
-      : "Тап по левой половине сцены возвращает на шаг назад, по правой ведёт дальше.";
 
   runtime.bubbleElement.classList.remove("is-animating");
   void runtime.bubbleElement.offsetWidth;
@@ -324,4 +370,22 @@ function clamp(value: number, min: number, max: number): number {
 
 function destroySpreadRuntime(runtime: SpreadRuntime): void {
   runtime.canvas.destroy();
+}
+
+function playTransitionSound(runtime: SpreadRuntime, previousIndex: number, nextIndex: number): void {
+  const reachedFinalLine = nextIndex === runtime.lines.length - 1 && previousIndex !== runtime.lines.length - 1;
+
+  if (reachedFinalLine) {
+    interfaceAudio.play("finalReveal");
+    return;
+  }
+
+  if (nextIndex > previousIndex) {
+    interfaceAudio.play("stepForward");
+    return;
+  }
+
+  if (nextIndex < previousIndex) {
+    interfaceAudio.play("stepBack");
+  }
 }
