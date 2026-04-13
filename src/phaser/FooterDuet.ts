@@ -346,7 +346,7 @@ export function buildInteractiveFooter(reducedMotion: boolean): HTMLElement {
         <button type="button" class="footer-duet__button" data-last-card-reset>Снова</button>
       </div>
       <div class="footer-duet__meta footer-duet__meta--stacked">
-        <p class="footer-duet__copyright">Ilya G Mirin 2026</p>
+        <p>Ilya G Mirin 2026</p>
         <p>Cards and UI sounds adapted from open sources.</p>
       </div>
     </div>

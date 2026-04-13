@@ -553,15 +553,6 @@ input {
   pointer-events: auto;
 }
 
-.footer-duet__copyright {
-  margin: 0;
-  color: var(--paper);
-  font-family: inherit;
-  font-size: 0.92rem;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
-
 .footer-duet__meta {
   display: grid;
   gap: 0.35rem;
